@@ -8,7 +8,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from module.utils import get_project_root
+from module.utils import get_project_root, get_embedding
 
 # Load environment variables
 load_dotenv()
@@ -18,22 +18,6 @@ openai = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize the encoder for TikToken
 encoder = tiktoken.encoding_for_model('gpt-4')
-
-def get_embedding(text, model="text-embedding-3-small") -> list:
-    # Ensure the text is a single line string
-    text = text.replace("\n", " ")
-
-    # Encode the text and truncate if necessary
-    encoded_text = encoder.encode(text)
-    if len(encoded_text) > 8000:
-        warnings.warn('Text is too long, truncating to 8000 tokens.')
-        text = encoder.decode(encoded_text[:8000])
-
-    # Request embedding from OpenAI API
-    response = openai.embeddings.create(input=text, model=model)
-    
-    # Return the first embedding
-    return response.data[0].embedding
 
 def generate_sample_embedding():
 
@@ -67,15 +51,7 @@ def main():
     print(sample_data.head())
     print(sample_data.columns)
     print(len(sample_data['embedding'][0]))
-
     del(variable)
-
-
-    
-    # sample_data = generate_sample_embedding()
-    # print(sample_data.head())
-    # print(sample_data.columns)
-
 
 if __name__ == '__main__':
     main()

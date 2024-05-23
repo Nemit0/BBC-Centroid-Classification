@@ -1,0 +1,9 @@
+pandas
+polars
+numpy
+pyarrow
+fastparquet
+tiktoken
+openai
+tqdm
+python-dotenv

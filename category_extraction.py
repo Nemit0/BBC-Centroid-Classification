@@ -9,10 +9,11 @@ import json
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
+from module.utils import get_project_root, get_embedding
 
+# Base variables/objects
 load_dotenv()
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
 encoder = tiktoken.encoding_for_model('gpt-4')
 
 def get_embedding(text, model="text-embedding-3-small") -> list:
@@ -58,7 +59,6 @@ def process_category(category, category_embeddings):
         for cat in category_embeddings
     }
     return category, embedding, scores
-
 
 def main():
     base_path = os.path.join(os.getcwd(), 'data')
