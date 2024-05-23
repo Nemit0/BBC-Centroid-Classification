@@ -1,0 +1,181 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global}
+    \entry{Folch_Arribas-Bel_Koschinsky_Spielman_2016}{article}{}
+      \name{author}{4}{}{%
+        {{hash=54110d45b6440a2db3d484ded6cc1427}{%
+           family={Folch},
+           familyi={F\bibinitperiod},
+           given={David\bibnamedelima C.},
+           giveni={D\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+        {{hash=82c47cadc67b90c534ee17f2ce4edd67}{%
+           family={Arribas-Bel},
+           familyi={A\bibinithyphendelim B\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod}}}%
+        {{hash=b58c14c9d4d869e8daeff341ed3119c4}{%
+           family={Koschinsky},
+           familyi={K\bibinitperiod},
+           given={Julia},
+           giveni={J\bibinitperiod}}}%
+        {{hash=1b0f7131729161b0410cb2a6e72a7858}{%
+           family={Spielman},
+           familyi={S\bibinitperiod},
+           given={Seth\bibnamedelima E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{1e19e5a26f88dd5ad88ae0bc2947cb2b}
+      \strng{fullhash}{12ff41efd9e896248db5f732493ae1ad}
+      \strng{bibnamehash}{1e19e5a26f88dd5ad88ae0bc2947cb2b}
+      \strng{authorbibnamehash}{1e19e5a26f88dd5ad88ae0bc2947cb2b}
+      \strng{authornamehash}{1e19e5a26f88dd5ad88ae0bc2947cb2b}
+      \strng{authorfullhash}{12ff41efd9e896248db5f732493ae1ad}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0070-3370, 1533-7790}
+      \field{journaltitle}{Demography}
+      \field{month}{10}
+      \field{number}{5}
+      \field{title}{Spatial Variation in the Quality of American Community Survey Estimates}
+      \field{volume}{53}
+      \field{year}{2016}
+      \field{pages}{1535\bibrangedash 1554}
+      \range{pages}{20}
+      \verb{doi}
+      \verb 10.1007/s13524-016-0499-1
+      \endverb
+    \endentry
+    \entry{singh_area_2003}{article}{}
+      \name{author}{1}{}{%
+        {{hash=2ba229436e40146a1f737982ad7ad9ca}{%
+           family={Singh},
+           familyi={S\bibinitperiod},
+           given={Gopal\bibnamedelima K.},
+           giveni={G\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+      }
+      \strng{namehash}{2ba229436e40146a1f737982ad7ad9ca}
+      \strng{fullhash}{2ba229436e40146a1f737982ad7ad9ca}
+      \strng{bibnamehash}{2ba229436e40146a1f737982ad7ad9ca}
+      \strng{authorbibnamehash}{2ba229436e40146a1f737982ad7ad9ca}
+      \strng{authornamehash}{2ba229436e40146a1f737982ad7ad9ca}
+      \strng{authorfullhash}{2ba229436e40146a1f737982ad7ad9ca}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Objectives. This study examined age-, sex-, and race-specific gradients in {US} mortality by area deprivation between 1969 and 1998. Methods. A census-based area deprivation index was linked to county mortality data. Results. Area deprivation gradients in {US} mortality increased substantially during 1969 through 1998. The gradients were steepest for men and women aged 25 to 44 years and those younger than 25 years, with higher mortality rates observed in more deprived areas. Although area gradients were less pronounced for women in each age group, they rose sharply for women aged 25 to 44 and 45 to 64 years. Conclusions. Areal inequalities in mortality widened because of slower mortality declines in more deprived areas. Future research needs to examine population-level social, behavioral, and medical care factors that may account for the increasing gradient. (Am J Public Health. 2003;93:1137–1143)}
+      \field{issn}{0090-0036, 1541-0048}
+      \field{journaltitle}{American Journal of Public Health}
+      \field{langid}{english}
+      \field{month}{7}
+      \field{number}{7}
+      \field{shortjournal}{Am J Public Health}
+      \field{title}{Area Deprivation and Widening Inequalities in {US} Mortality, 1969–1998}
+      \field{urlday}{11}
+      \field{urlmonth}{11}
+      \field{urlyear}{2022}
+      \field{volume}{93}
+      \field{year}{2003}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \field{pages}{1137\bibrangedash 1143}
+      \range{pages}{7}
+      \verb{doi}
+      \verb 10.2105/AJPH.93.7.1137
+      \endverb
+      \verb{file}
+      \verb Singh - 2003 - Area Deprivation and Widening Inequalities in US M.pdf:C\:\\Users\\andyk\\Zotero\\storage\\ALTGZYWA\\Singh - 2003 - Area Deprivation and Widening Inequalities in US M.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://ajph.aphapublications.org/doi/full/10.2105/AJPH.93.7.1137
+      \endverb
+      \verb{url}
+      \verb https://ajph.aphapublications.org/doi/full/10.2105/AJPH.93.7.1137
+      \endverb
+    \endentry
+    \entry{spielman2020evaluating}{article}{}
+      \name{author}{7}{}{%
+        {{hash=1b0f7131729161b0410cb2a6e72a7858}{%
+           family={Spielman},
+           familyi={S\bibinitperiod},
+           given={Seth\bibnamedelima E},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+        {{hash=421baca01043a483c0784335dc4077e9}{%
+           family={Tuccillo},
+           familyi={T\bibinitperiod},
+           given={Joseph},
+           giveni={J\bibinitperiod}}}%
+        {{hash=54110d45b6440a2db3d484ded6cc1427}{%
+           family={Folch},
+           familyi={F\bibinitperiod},
+           given={David\bibnamedelima C},
+           giveni={D\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+        {{hash=b21ec05f2fbd1cf08178633f7db8e35c}{%
+           family={Schweikert},
+           familyi={S\bibinitperiod},
+           given={Amy},
+           giveni={A\bibinitperiod}}}%
+        {{hash=01992b4e449bffab08c9ebfe59b5433f}{%
+           family={Davies},
+           familyi={D\bibinitperiod},
+           given={Rebecca},
+           giveni={R\bibinitperiod}}}%
+        {{hash=828338c77e15d4c4ae175f48326d044a}{%
+           family={Wood},
+           familyi={W\bibinitperiod},
+           given={Nathan},
+           giveni={N\bibinitperiod}}}%
+        {{hash=f3610259d0dd00087b85b1f8eabd54bd}{%
+           family={Tate},
+           familyi={T\bibinitperiod},
+           given={Eric},
+           giveni={E\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{75570ae89a60a2687c3cd527feb918da}
+      \strng{fullhash}{1dceeb7e507c7cd0c3126a29d84e5767}
+      \strng{bibnamehash}{75570ae89a60a2687c3cd527feb918da}
+      \strng{authorbibnamehash}{75570ae89a60a2687c3cd527feb918da}
+      \strng{authornamehash}{75570ae89a60a2687c3cd527feb918da}
+      \strng{authorfullhash}{1dceeb7e507c7cd0c3126a29d84e5767}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Natural Hazards}
+      \field{number}{1}
+      \field{title}{Evaluating social vulnerability indicators: criteria and their application to the Social Vulnerability Index}
+      \field{volume}{100}
+      \field{year}{2020}
+      \field{pages}{417\bibrangedash 436}
+      \range{pages}{20}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
