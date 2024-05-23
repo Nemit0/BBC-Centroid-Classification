@@ -1,6 +1,7 @@
 import pandas as pd
 import polars as pl
 import numpy as np
+from multiprocessing import Pool, cpu_count
 import os
 from tqdm import tqdm
 from openai import OpenAI
@@ -55,45 +56,45 @@ def get_unique_categories(data_list:list, write:bool=True) -> list:
 def count_category_occurrence(data_list: list, category_list: list, write: bool = True) -> pl.DataFrame:
     project_root = get_project_root()
     data_path = os.path.join(project_root, 'data')
-    category_count = {category: 0 for category in category_list}
 
     # Process each file sequentially
     for file in tqdm(data_list, desc="Processing Files"):
         print(f"Processing {file}")
         file_path = os.path.join(data_path, file)
         lf = pl.read_parquet(file_path)
-
         print("Start processing")
-        # First, concatenate all categories from the 3rd column (0-indexed) into a single list
-        categories = lf.get_column('categories').to_list()
-        categories = [item for sublist in categories for item in sublist]  # Flatten the list of lists
-        print(len(categories))
+        _category_frame = {category: 0 for category in category_list}
 
-        print("Start counting")
-        # Use ThreadPoolExecutor to count occurrences of each category
-        def count_category(category):
-            #print(category)
-            return category, categories.count(category)
+        for row in tqdm(lf.iter_rows()):
+            doc_categories = list(row[3])
+            # print(doc_categories)
+            for category in doc_categories:
+                _category_frame[category] += 1
         
-        print("Start mapping")
-        with ThreadPoolExecutor(max_workers=64) as executor:
-            # Wrap the executor.map call with tqdm for progress tracking
-            results = list(tqdm(executor.map(count_category, category_list),
-                                total=len(category_list),
-                                desc="Counting Categories"))
+        # write as json
+        with open(os.path.join(data_path, f'{file}_category_counts.json'), 'w') as f:
+            json.dump(_category_frame, f)
+        
+        del _category_frame
+        del lf
 
-            for category, count in results:
-                category_count[category] += count
-
-        del lf  # Clean up LazyFrame from memory
-
-    # Save the category counts to a JSON file
+    json_list = [file for file in os.listdir(data_path) if file.endswith('json') and file not in ['category_list.json']]
+    combined_category_frame = {category : 0 for category in category_list}
+    for json_file in json_list:
+        with open(os.path.join(data_path, json_file), 'r') as f:
+            category_frame = json.load(f)
+            for category in category_frame:
+                combined_category_frame[category] += category_frame[category]
+    
     if write:
         with open(os.path.join(data_path, 'final_category_counts.json'), 'w') as f:
-            json.dump(category_count, f)
-
+            json.dump(combined_category_frame, f)
+    
+    # print top 5 categories by number
+    sorted_categories = sorted(combined_category_frame.items(), key=lambda x: x[1], reverse=True)
+    print(sorted_categories[:5])
     # Return results as a DataFrame
-    return pl.DataFrame([category_count])
+    return pl.DataFrame(combined_category_frame)
 
 def process_category(category, category_embeddings):
     # Calculate the embedding for the category and similarity scores for interest categories
@@ -120,9 +121,11 @@ def main():
     base_path = os.path.join(os.getcwd(), 'data')
     with open(os.path.join(base_path, 'category_list.json'), 'r') as f:
         category_list = json.load(f)
+    
+    print(len(category_list))
+    
 
-    category_frequency = count_category_occurrence(data_list, category_list)
-    print(category_frequency)
+    count_category_occurrence(data_list, category_list)
 
     return 0
 
