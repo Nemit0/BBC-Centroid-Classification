@@ -24,15 +24,15 @@ def main():
     data_list = [file for file in os.listdir(os.path.join(project_root, 'data')) if file.endswith('.parquet')]
     non_data_list = ['sample_embedding.parquet', 'sample.parquet', 'wiki_2023_index.parquet']
     data_list = [file for file in data_list if file not in non_data_list]
-    index_df = pd.read_parquet(os.path.join(os.path.dirname(__file__), 'data', 'wiki_2023_index.parquet'))
+    index_df = pd.read_parquet(os.path.join(project_root, 'data', 'wiki_2023_index.parquet'))
 
     # Sample 100 random rows from data_list
-    print(os.listdir(os.path.join(os.path.dirname(__file__), 'data')))
-    if 'sample.parquet' in os.listdir(os.path.join(os.path.dirname(__file__), 'data')):
+    print(os.listdir(os.path.join(project_root, 'data')))
+    if 'sample.parquet' in os.listdir(os.path.join(project_root, 'data')):
         print('Sampled data already exists')
-        sample_df = pd.read_parquet(os.path.join(os.path.dirname(__file__), 'data', 'sample.parquet'))
+        sample_df = pd.read_parquet(os.path.join(project_root, 'data', 'sample.parquet'))
     else:
-        sample_df = sample_data(data_list, n=100, output_path='./data/sample.parquet')
+        sample_df = sample_data(data_list, n=100, output_path=os.path.join(project_root, 'data', 'sample.parquet'))
     
     # Randomize the sample data in random order
     sample_df = sample_df.sample(frac=1, random_state=42)
