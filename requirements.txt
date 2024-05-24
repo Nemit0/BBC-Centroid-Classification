@@ -11,3 +11,4 @@ torch
 transformers
 scikit-learn
 matplotlib
+nltk

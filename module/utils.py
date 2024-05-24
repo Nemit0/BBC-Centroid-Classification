@@ -24,3 +24,5 @@ def get_embedding(text:str, client:OpenAI, encoder:Encoding, model="text-embeddi
     
     # Return the first embedding
     return response.data[0].embedding
+
+data_list = [file for file in os.listdir(os.path.join(get_project_root(), "data")) if file.endswith(".parquet") and 'sample' not in file]
