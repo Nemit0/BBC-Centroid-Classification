@@ -35,10 +35,5 @@ def main():
         del df
         del _category_id_frame
 
-
-
-
-
-
 if __name__ == '__main__':
     main()
