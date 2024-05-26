@@ -37,21 +37,38 @@ def main():
     print('start embedding')
 
     # First divide the categories into n evenly sized chunks
-    n = 1000
-    category_size = len(categories)
-    chunk_size = int(np.floor(category_size / n) + 1)
-    chunk_num = int(np.floor(category_size // chunk_size)+1)
-    category_chunks = [categories[i:i+chunk_size] for i in range(0, category_size-chunk_size, chunk_size)]
-    category_chunks.append(categories[chunk_size*(chunk_num-1):])
-    # Ensure that the chunk is perfectly divided without any loss
-    assert sum([len(chunk) for chunk in category_chunks]) == len(categories)
     
-    for i, chunk in enumerate(category_chunks):
-        with open(os.path.join(chunk_path, f"chunk_{i}_categories.json"), "w") as f:
-            json.dump(chunk, f)
-    
-    chunk_list = [os.path.join(chunk_path, f"chunk_{i}_categories.json") for i in range(chunk_num)]
-    chunk_list = [_chunk for _chunk in chunk_list if not os.path.exists(f"{_chunk}_embeddings.json")]
+    # Check that chunk has not yet been generated
+    if not os.path.exists(chunk_path):
+        print('creating chunk directory and generating chunks')
+        os.mkdir(chunk_path)
+        n = 1000
+        category_size = len(categories)
+        chunk_size = int(np.floor(category_size / n) + 1)
+        chunk_num = int(np.floor(category_size // chunk_size)+1)
+        category_chunks = [categories[i:i+chunk_size] for i in range(0, category_size-chunk_size, chunk_size)]
+        category_chunks.append(categories[chunk_size*(chunk_num-1):])
+        # Ensure that the chunk is perfectly divided without any loss
+        assert sum([len(chunk) for chunk in category_chunks]) == len(categories)
+        
+        for i, chunk in enumerate(category_chunks):
+            with open(os.path.join(chunk_path, f"chunk_{i}_categories.json"), "w") as f:
+                json.dump(chunk, f)
+            n = 1000
+        category_size = len(categories)
+        chunk_size = int(np.floor(category_size / n) + 1)
+        chunk_num = int(np.floor(category_size // chunk_size)+1)
+        category_chunks = [categories[i:i+chunk_size] for i in range(0, category_size-chunk_size, chunk_size)]
+        category_chunks.append(categories[chunk_size*(chunk_num-1):])
+        # Ensure that the chunk is perfectly divided without any loss
+        assert sum([len(chunk) for chunk in category_chunks]) == len(categories)
+        
+        for i, chunk in enumerate(category_chunks):
+            with open(os.path.join(chunk_path, f"chunk_{i}_categories.json"), "w") as f:
+                json.dump(chunk, f)
+
+    _chunk_filename_list = [file for file in os.listdir(chunk_path) if file.endswith("categories.json")]
+    chunk_list = [file for file in _chunk_filename_list if not os.path.exists(f"{file}_embeddings.json")]
     # Process per chunks
     for i, chunk_filename in enumerate(tqdm(chunk_list)):
         with open(chunk_filename, "r") as f:

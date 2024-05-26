@@ -12,3 +12,4 @@ transformers
 scikit-learn
 matplotlib
 nltk
+rich

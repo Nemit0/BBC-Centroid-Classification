@@ -13,6 +13,7 @@ from multiprocessing import Pool, cpu_count
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from tqdm import tqdm
+from rich import print
 
 from utils import get_project_root
 
@@ -56,12 +57,18 @@ class BagOfWordsEmbedding:
         self.data_list = data_list
         self.data_type = data_type
         self.unique_words = []
+        self.token_map = {}
+        self.output_dim = 0
         if unique_word_data:
             with open(unique_word_data, 'r') as f:
-                self.unique_words = json.load(f)
+                self.token_map = json.load(f)
+                self.unique_words = list(self.token_map.keys())
+                self.output_dim = len(self.unique_words)
             if not isinstance(self.unique_words, list):
                 warnings.warn("Invalid data type for unique words. Ignoring the data.")
                 self.unique_words = []
+                self.token_map = {}
+                self.output_dim = 0
         return None
 
     def load_data(self, path:str, type:str, lazy:bool=False) -> pl.DataFrame:
@@ -98,6 +105,8 @@ class BagOfWordsEmbedding:
 
         word_list = [word for sublist in results for word in sublist] # Flatten list of lists
         unique_words = list(set(word_list))
+        unique_words.sort()
+        
         return unique_words
     
     def load_and_process_data(self, data):
@@ -124,6 +133,8 @@ class BagOfWordsEmbedding:
 
         # Remove duplicates from the list of unique words
         self.unique_words = list(set(self.unique_words))
+        self.token_map = {word: i for i, word in enumerate(self.unique_words)}
+        self.output_dim = len(self.unique_words)
         return None
 
     def save_words(self, path:str) -> None:
@@ -132,32 +143,32 @@ class BagOfWordsEmbedding:
         This file basically act as a vocabulary for the BoW embedding.
         """
         with open(path, 'w') as f:
-            json.dump(self.unique_words, f)
+            json.dump(self.token_map, f)
+
         return None
     
-    def embed(self, document: str, unique_words: List[str]) -> np.array:
+    def embed(self, document: str) -> np.array:
         """
         Embeds the document using the unique words after cleaning the text similarly to the training process.
         """
         # Clean the text as per the training preprocessing
-        cleaned_text = ' '.join(clean_and_split_words(document))
+        word_list = clean_and_split_words(document)
+        vector = np.zeros(self.output_dim)
 
-        # Create a CountVectorizer instance using the pre-defined vocabulary (unique words)
-        vectorizer = CountVectorizer(vocabulary=unique_words)
-
-        # Apply the vectorizer to the cleaned text
-        return vectorizer.fit_transform([cleaned_text]).toarray().flatten()
+        for word in word_list:
+            token_id = self.token_map.get(word, None)
+            if token_id:
+                vector[token_id] += 1
         
+        return vector
 
-    def embed_dataframe(self, data: pl.DataFrame, unique_words: List[str]) -> pl.DataFrame:
+    def embed_dataframe(self, data: pl.DataFrame) -> pl.DataFrame:
         """
         Embeds the text data in the dataframe using the unique words.
         """
-        def apply_embedding(text):
-            return self.embed(text, unique_words)
 
         with ThreadPoolExecutor(max_workers=100) as executor:
-            futures = [executor.submit(apply_embedding, text) for text in data['text']]
+            futures = [executor.submit(self.embed, text) for text in data['text']]
             embeddings = [future.result() for future in as_completed(futures)]
         
         # Ensure all embeddings are numpy arrays of the same shape
@@ -189,11 +200,14 @@ if __name__ == "__main__":
 
     # Load the unique words
     BowEncoder = BagOfWordsEmbedding(data_list, unique_word_data=os.path.join(model_path, 'sample_data_unique_words.json'), data_type='parquet')
+    # test embeddings
+    sample_embedding = BowEncoder.embed(text)
+    print(sample_embedding)
     # Generate some sample embeddings
     sample_documents = pl.read_parquet(os.path.join(data_path, "sample.parquet"))
     # sample 100 rows
     sample_documents = sample_documents.head(100)
-    embeddings = BowEncoder.embed_dataframe(sample_documents, BowEncoder.unique_words)
+    embeddings = BowEncoder.embed_dataframe(sample_documents)
     print(embeddings.head())
 
     # Visualize the embeddings using dimension reduction to 2D

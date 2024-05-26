@@ -2,6 +2,7 @@ import os
 from openai import OpenAI
 import warnings
 from tiktoken import Encoding
+import numpy as np
 
 def get_project_root() -> str:
     file_path = os.path.abspath(__file__)
@@ -24,5 +25,18 @@ def get_embedding(text:str, client:OpenAI, encoder:Encoding, model="text-embeddi
     
     # Return the first embedding
     return response.data[0].embedding
+
+def cosine_similarity(a:np.array, b:np.array) -> float:
+    """
+    Returns the cosine similarity between two vectors.
+    """
+    if not isinstance(a, np.ndarray) or not isinstance(b, np.ndarray):
+        warnings.warn("Input vectors are not numpy arrays. Trying to convert to numpy arrays.")
+        try:
+            a = np.array(a)
+            b = np.array(b)
+        except:
+            raise ValueError("Input vectors cannot be converted to numpy arrays.")
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 data_list = [file for file in os.listdir(os.path.join(get_project_root(), "data")) if file.endswith(".parquet") and 'sample' not in file]
