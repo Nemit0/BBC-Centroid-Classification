@@ -14,9 +14,9 @@ from nltk.stem import PorterStemmer
 from tqdm import tqdm
 from rich import print
 
-from utils import get_project_root
+from .utils import get_project_root
 
-def clean_and_split_words(text: str, use_stemming: bool = False) -> List[str]:
+def clean_and_split_words(text: str, use_stemming: bool = True) -> List[str]:
     """
     Clean and split words from text.
     - Converts text to lowercase.
@@ -63,7 +63,7 @@ class BagOfWordsEmbedding:
                 self.token_map = json.load(f)
                 self.unique_words = list(self.token_map.keys())
                 self.output_dim = len(self.unique_words)
-            if not isinstance(self.unique_words, list):
+            if not isinstance(self.unique_words, dict):
                 warnings.warn("Invalid data type for unique words. Ignoring the data.")
                 self.unique_words = []
                 self.token_map = {}
@@ -108,7 +108,7 @@ class BagOfWordsEmbedding:
         
         return unique_words
     
-    def load_and_process_data(self, data):
+    def load_and_process_data(self, data:str) -> list[str]:
         """
         Helper function to load and process each data item.
         This function is designed to be used with ThreadPoolExecutor.
@@ -116,23 +116,52 @@ class BagOfWordsEmbedding:
         data_frame = self.load_data(data, self.data_type, lazy=False)
         return self.get_unique_words(data_frame)
     
-    def train(self, max_workers=3) -> None:
+    def train(self, max_workers:int=3, k:int=0) -> None:
         """
         Read and process the data to get the unique words, which will be used to create BoW embedding.
         The function returns nothing, but it's not executed on __init__ to allow for more flexibility, and potential model loading.
         Uses ThreadPoolExecutor to handle multiple data files.
+        The argument k is min threshhold for the word to be included in the unique words of occurence.
         """
-        # Initialize ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit tasks to the executor
-            futures = {executor.submit(self.load_and_process_data, data): data for data in self.data_list}
+        _token_map = {}
+        if max_workers > 1:
+            # Initialize ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit tasks to the executor
+                futures = {executor.submit(self.load_and_process_data, data): data for data in self.data_list}
 
-            for future in as_completed(futures):
-                self.unique_words.extend(future.result())  # Collect results as they complete
+                for future in as_completed(futures):
+                    _unique_word = set(future.result())
+                    for word in _unique_word:
+                        _token_map[word] += 1
+                    _unique_word.update(self.unique_words)
+                self.unique_words.extend(list(_unique_word))
+                del _unique_word    
 
-        # Remove duplicates from the list of unique words
+        elif max_workers == 1:
+            # Single-threaded processing
+            for data in tqdm(self.data_list):
+                _unique_word = set(self.get_unique_words(self.load_data(data, self.data_type, lazy=False)))
+                for word in _unique_word:
+                    if word in _token_map.keys():
+                        _token_map[word] += 1
+                    else:
+                        _token_map[word] = 1
+                _unique_word.update(self.unique_words)
+            self.unique_words.extend(list(_unique_word))
+            del _unique_word
+        else:
+            raise ValueError("Invalid value for max_workers. Must be greater than 0.")
+
+        # Remove duplicates from the list of unique words just to make sure
         self.unique_words = list(set(self.unique_words))
         self.token_map = {word: i for i, word in enumerate(self.unique_words)}
+        if k > 0:
+            print(f"Removing words with occurence less than {k}. Current unique words: {len(self.unique_words)}")
+            self.unique_words = [word for word in self.unique_words if _token_map[word] >= k]
+            self.token_map = {word: i for i, word in enumerate(self.unique_words)}
+            print(f"New unique words: {len(self.unique_words)}")
+
         self.output_dim = len(self.unique_words)
         return None
 
@@ -145,7 +174,7 @@ class BagOfWordsEmbedding:
             json.dump(self.token_map, f)
 
         return None
-    
+        
     def embed(self, document: str) -> np.array:
         """
         Embeds the document using the unique words after cleaning the text similarly to the training process.
