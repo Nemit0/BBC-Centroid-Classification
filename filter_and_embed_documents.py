@@ -56,7 +56,7 @@ def main():
     if "bow_token_map.json" not in os.listdir(model_path):
         print("Training BOW Encoder...")
         bow = BagOfWordsEmbedding(data_list)
-        bow.train(max_workers=1, k=10)
+        bow.train(max_workers=1, k=20)
         bow.save_words(os.path.join(model_path, "bow_token_map.json"))
         del bow
         
@@ -67,15 +67,46 @@ def main():
     with open(os.path.join(data_path, 'filtered_category_list.json'), 'r') as f:
         category_list = json.load(f)
     
-    
-    # for file in tqdm(data_list):
-    #     file_name = file.split('/')[-1]
-    #     file_chunk_dir = os.path.join(chunk_path, file_name)
-    #     chunk_list = [os.path.join(file_chunk_dir, chunk) for chunk in os.listdir(file_chunk_dir)]
-    #     chunk_list = [chunk for chunk in chunk_list if chunk.endswith('.parquet') and not chunk.endswith('embed.parquet')]
+    for file in data_list:
+        print(f"Processing {file}...")
+        file_name = file.split('/')[-1]
+        file_chunk_dir = os.path.join(chunk_path, file_name)
+        chunk_list = [os.path.join(file_chunk_dir, chunk) for chunk in os.listdir(file_chunk_dir) if chunk.endswith('.parquet') and not chunk.endswith('embed.parquet')]
+        embedded_list = [chunk for chunk in chunk_list if chunk.endswith('embed.parquet')]
+        chunk_list = [chunk for chunk in chunk_list if f"{chunk.split('/')[-1].replace('.parquet', '')}_embed.parquet" not in embedded_list]
         
-    #     def process_chunk(chunk):
-            
+        def process_chunk(chunk_path):
+            chunk_df = pl.read_parquet(chunk_path)
+            print(f"Processing {os.path.basename(chunk_path)}...")
+            # Filter rows where the 'categories' column contains any category in category_list
+            chunk_df = chunk_df.filter(chunk_df["categories"].apply(lambda cats: any(cat in category_list for cat in cats)))
+            print(f"Filtered {os.path.basename(chunk_path)}...")
+            # Apply the embedding to the 'text' column
+            if not chunk_df.is_empty():
+                chunk_df = bow.embed_dataframe(chunk_df)
 
+                # Drop the 'text' column after embedding
+                chunk_df = chunk_df.drop('text')
+
+                # Save the modified DataFrame back to a Parquet file
+                chunk_df.write_parquet(chunk_path.replace('.parquet', '_embed.parquet'))
+                print(f"Processed and saved embedded data for {os.path.basename(chunk_path)}")
+            else:
+                print(f"No data to process for {os.path.basename(chunk_path)}")
+                # Write as empty file
+                chunk_df.write_parquet(chunk_path.replace('.parquet', '_embed.parquet'))
+            
+            return 0
+        
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(process_chunk, chunk) for chunk in chunk_list]
+            for future in as_completed(futures):
+                future.result()
+
+    print("All chunks saved.")
+    print("All processes completed.")
+
+    return 0
+            
 if __name__ == "__main__":
     main()

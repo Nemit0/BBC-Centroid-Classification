@@ -63,7 +63,7 @@ class BagOfWordsEmbedding:
                 self.token_map = json.load(f)
                 self.unique_words = list(self.token_map.keys())
                 self.output_dim = len(self.unique_words)
-            if not isinstance(self.unique_words, dict):
+            if not isinstance(self.token_map, dict):
                 warnings.warn("Invalid data type for unique words. Ignoring the data.")
                 self.unique_words = []
                 self.token_map = {}
