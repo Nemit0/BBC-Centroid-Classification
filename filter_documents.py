@@ -37,15 +37,11 @@ def main():
     
     print(f"Filtering documents with categories: {filtered_category_list[:10]} and {len(filtered_category_list) - 10} more.")
     # filter documents in each file and save as parquet in different name
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # Submit all tasks to the executor
-        future_to_file = {executor.submit(filter_dataframe, pl.read_parquet(os.path.join(data_path, file)), filtered_category_list): file for file in data_list}
-        # Progress bar setup
-        progress = tqdm(as_completed(future_to_file), total=len(data_list), desc="Filtering Documents", file=sys.stdout)
-        for future in progress:
-            file = future_to_file[future]
-            df = future.result()
-            df.sink_parquet(os.path.join(data_path, f"{file.split('.')[0]}_filtered.parquet"))
+    for file in tqdm(data_list):
+        df = pl.scan_parquet(os.path.join(data_path, file))
+        filtered_df = filter_dataframe(df, filtered_category_list)
+        filtered_df.sink_parquet(os.path.join(data_path, f"filtered_{file}"))
+        del df
     
     return 0
 

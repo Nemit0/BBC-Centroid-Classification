@@ -7,7 +7,6 @@ import json
 import warnings
 
 from typing import List
-from sklearn.feature_extraction.text import CountVectorizer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import Pool, cpu_count
 from nltk.corpus import stopwords
