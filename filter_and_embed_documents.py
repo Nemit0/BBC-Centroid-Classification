@@ -11,12 +11,11 @@ from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import reduce
 from rich import print
-from tenacity import retry, stop_after_attempt
 
-from module.utils import get_embedding, get_project_root, cosine_similarity
+from module.utils import get_embedding, get_project_root, cosine_similarity, retry
 from module.bow import BagOfWordsEmbedding
 
-@retry(stop=stop_after_attempt(5))
+@retry(max_try=5)
 def main():
     print("Initializing...")
     project_root = get_project_root()
@@ -68,7 +67,7 @@ def main():
     with open(os.path.join(data_path, 'filtered_category_list.json'), 'r') as f:
         category_list = json.load(f)
     
-    for file in data_list:
+    for file in tqdm(data_list):
         print(f"Processing {file}...")
         file_name = file.split('/')[-1]
         file_chunk_dir = os.path.join(chunk_path, file_name)

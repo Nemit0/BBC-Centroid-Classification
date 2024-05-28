@@ -1,8 +1,10 @@
 import os
-from openai import OpenAI
 import warnings
-from tiktoken import Encoding
 import numpy as np
+
+from tiktoken import Encoding
+from openai import OpenAI
+from typing import Callable
 
 def get_project_root() -> str:
     file_path = os.path.abspath(__file__)
@@ -38,5 +40,16 @@ def cosine_similarity(a:np.array, b:np.array) -> float:
         except:
             raise ValueError("Input vectors cannot be converted to numpy arrays.")
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def retry(func:Callable, max_try:int=5) -> Callable:
+    def wrapper(*args, **kwargs):
+        for i in range(max_try):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(e)
+                if i == max_try - 1:
+                    raise e
+    return wrapper
 
 data_list = [file for file in os.listdir(os.path.join(get_project_root(), "data")) if file.endswith(".parquet") and 'sample' not in file]
