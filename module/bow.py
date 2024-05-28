@@ -5,6 +5,7 @@ import re
 import nltk
 import json
 import warnings
+import sys
 
 from typing import List
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -14,7 +15,10 @@ from nltk.stem import PorterStemmer
 from tqdm import tqdm
 from rich import print
 
-from .utils import get_project_root
+try:
+    from utils import get_project_root
+except ModuleNotFoundError:
+    from module.utils import get_project_root
 
 def clean_and_split_words(text: str, use_stemming: bool = True) -> List[str]:
     """
@@ -46,10 +50,10 @@ def clean_and_split_words(text: str, use_stemming: bool = True) -> List[str]:
 class BagOfWordsEmbedding:
     def __init__(self, data_list:list=None, unique_word_data:str=None, data_type:str='parquet') -> list:
         """
-        dataframe is expected to have a 'text' column
+        Dataframe is expected to have a 'text' column
         where it should contain all the text data from documents.
         If unique_word_data is provided, it will be used to get the unique words.
-        unique_word should be a string to the path of the data. Data should be json file of list.
+        unique_word should be a string to the path of the data. Data should be json file of dict.
         """
         # Ensure that the nltk stopwords are downloaded
         nltk.download('stopwords')
@@ -133,7 +137,10 @@ class BagOfWordsEmbedding:
                 for future in as_completed(futures):
                     _unique_word = set(future.result())
                     for word in _unique_word:
-                        _token_map[word] += 1
+                        if word in _token_map.keys():
+                            _token_map[word] += 1
+                        else:
+                            _token_map[word] = 1
                     _unique_word.update(self.unique_words)
                 self.unique_words.extend(list(_unique_word))
                 del _unique_word    
@@ -190,24 +197,26 @@ class BagOfWordsEmbedding:
         
         return vector
 
-    def embed_dataframe(self, data: pl.DataFrame) -> pl.DataFrame:
+    def embed_dataframe(self, data: pl.DataFrame|pl.LazyFrame) -> pl.DataFrame:
         """
         Embeds the text data in the dataframe using the unique words.
         """
+        if isinstance(data, pl.DataFrame):
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                futures = [executor.submit(self.embed, text) for text in data['text']]
+                embeddings = [future.result() for future in as_completed(futures)]
+            
+            # Ensure all embeddings are numpy arrays of the same shape
+            embeddings_array = np.array(embeddings)
 
-        with ThreadPoolExecutor(max_workers=100) as executor:
-            futures = [executor.submit(self.embed, text) for text in data['text']]
-            embeddings = [future.result() for future in as_completed(futures)]
-        
-        # Ensure all embeddings are numpy arrays of the same shape
-        embeddings_array = np.array(embeddings)
-
-        # Convert embeddings list to a Series and add to the dataframe
-        embeddings_series = pl.Series("embeddings", embeddings_array.tolist())
-        data = data.with_columns(embeddings_series)
-        return data
+            # Convert embeddings list to a Series and add to the dataframe
+            embeddings_series = pl.Series("embeddings", embeddings_array.tolist())
+            data = data.with_columns(embeddings_series)
+            return data
+        elif isinstance(data, pl.LazyFrame):
+            raise NotImplementedError
+            return data.select([self.embed_dataframe(data)])
     
-
 if __name__ == "__main__":
     text = 'This is a sample text. It is used to test the Bag of Words embedding.'
     text_split = clean_and_split_words(text)
@@ -233,10 +242,22 @@ if __name__ == "__main__":
     print(sample_embedding)
     # Generate some sample embeddings
     sample_documents = pl.read_parquet(os.path.join(data_path, "sample.parquet"))
-    # sample 100 rows
-    sample_documents = sample_documents.head(100)
     embeddings = BowEncoder.embed_dataframe(sample_documents)
     print(embeddings.head())
+    # sum up all embedding vectors into one
+    embedding_sum = np.sum(np.stack(embeddings['embeddings'].to_list()), axis=0)
+
+    embedding_sum_dict = {str(id): val for id, val in enumerate(embedding_sum)}
+
+    print(embedding_sum)
+    word_occurance = {word:embedding_sum_dict[str(id)] for word, id in BowEncoder.token_map.items()}
+
+    # Sort by value descending
+    word_occurance = dict(sorted(word_occurance.items(), key=lambda item: item[1], reverse=True))
+
+    print(list(word_occurance.values())[:10], list(word_occurance.keys())[:10])
+
+    sys.exit(0)
 
     # Visualize the embeddings using dimension reduction to 2D
     from sklearn.decomposition import PCA
