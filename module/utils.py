@@ -5,6 +5,7 @@ import numpy as np
 from tiktoken import Encoding
 from openai import OpenAI
 from typing import Callable
+from datetime import datetime
 
 def get_project_root() -> str:
     file_path = os.path.abspath(__file__)
@@ -41,15 +42,39 @@ def cosine_similarity(a:np.array, b:np.array) -> float:
             raise ValueError("Input vectors cannot be converted to numpy arrays.")
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-def retry(func:Callable, max_try:int=5) -> Callable:
+def retry(times, exceptions=Exception):
+    """
+    Retry Decorator
+    Retries the wrapped function/method `times` times if the exceptions listed
+    in ``exceptions`` are thrown
+    :param times: The number of times to repeat the wrapped function/method
+    :type times: Int
+    :param Exceptions: Lists of exceptions that trigger a retry attempt
+    :type Exceptions: Tuple of Exceptions
+    """
+    def decorator(func):
+        def newfn(*args, **kwargs):
+            attempt = 0
+            while attempt < times:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    print(
+                        'Exception thrown when attempting to run %s, attempt '
+                        '%d of %d' % (func, attempt, times)
+                    )
+                    attempt += 1
+            return func(*args, **kwargs)
+        return newfn
+    return decorator
+
+def timer(func:Callable) -> Callable:
     def wrapper(*args, **kwargs):
-        for i in range(max_try):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                print(e)
-                if i == max_try - 1:
-                    raise e
+        start_time = datetime.now()
+        result = func(*args, **kwargs)
+        end_time = datetime.now()
+        print(f"Function {func.__name__} executed in {end_time - start_time}")
+        return result
     return wrapper
 
 data_list = [file for file in os.listdir(os.path.join(get_project_root(), "data")) if file.endswith(".parquet") and 'sample' not in file]
