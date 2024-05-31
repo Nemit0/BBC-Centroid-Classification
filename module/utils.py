@@ -58,11 +58,8 @@ def retry(times, exceptions=Exception):
             while attempt < times:
                 try:
                     return func(*args, **kwargs)
-                except exceptions:
-                    print(
-                        'Exception thrown when attempting to run %s, attempt '
-                        '%d of %d' % (func, attempt, times)
-                    )
+                except exceptions as e:
+                    print(f'Exception thrown: {e}, attempt {attempt + 1}/{times}')
                     attempt += 1
             return func(*args, **kwargs)
         return newfn

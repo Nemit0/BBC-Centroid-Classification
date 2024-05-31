@@ -25,14 +25,14 @@ def main():
     embeded_data = 0
     for file in os.listdir(chunk_path):
         _chunk_path = os.path.join(chunk_path, file)
-        chunk_list = [chunk for chunk in os.listdir(_chunk_path) if chunk.endswith('.parquet') and f"embedding" not in chunk]
+        chunk_list = [chunk for chunk in os.listdir(_chunk_path) if chunk.endswith('.parquet') and f"embed" not in chunk]
         embeddings_list = [chunk for chunk in os.listdir(_chunk_path) if chunk.endswith('.parquet') and f"embed" in chunk]
         chunk_data += len(chunk_list)
         embeded_data += len(embeddings_list)
     
     print(f"Total data chunks: {chunk_data}")
     print(f"Total embedded data: {embeded_data}")
-
+    print("Percentage of data embedded: {:.2f}%".format(embeded_data / chunk_data * 100))
 
 if __name__ == "__main__":
     main()

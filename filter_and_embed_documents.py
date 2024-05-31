@@ -24,7 +24,7 @@ def main():
 
     print("Splitting data into chunks...")
     chunk_rows = 5000
-
+    
     if not os.listdir(chunk_path):
         for file in tqdm(data_list):
             file_path = os.path.join(data_path, file)
@@ -106,7 +106,6 @@ def main():
 
     print("All chunks saved.")
     print("All processes completed.")
-
     return 0
             
 if __name__ == "__main__":
