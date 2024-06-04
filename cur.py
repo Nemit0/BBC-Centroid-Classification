@@ -107,17 +107,23 @@ def main():
       os.mkdir(os.path.join(reduced_path, file))
     chunk_list = os.listdir(os.path.join(pruned_path, file))
     for chunk in tqdm(chunk_list):
-       if chunk in os.listdir(os.path.join(reduced_path, file)):
-          continue
-       df = pl.read_parquet(os.path.join(pruned_path, file, chunk))
-       embeddings = df['embeddings'].to_list()
-       embeddings = np.array(embeddings, float)
-       C, U, R = cur(embeddings, r=1500)
-       print(C)
-       print(U)
-       print(R)
-       break
-    break
+      if chunk in os.listdir(os.path.join(reduced_path, file)):
+        continue
+      try:
+        df = pl.read_parquet(os.path.join(pruned_path, file, chunk))
+        embeddings = df['embeddings'].to_list()
+        embeddings = np.array(embeddings, float)
+        C, U, R = cur(embeddings, r=1500)
+        _df = pl.DataFrame({"id": df['id'], "embeddings": U.tolist()})
+        df = df.drop("embeddings")
+        df = df.join(_df, on="id")
+        # print(df.head())
+        df.write_parquet(os.path.join(reduced_path, file, chunk))
+        del df, _df, embeddings, C, U, R
+      except Exception as e:
+        print(e)
+        print(f"Error occurred in {file}/{chunk}, likely due to mismatch in dimension: {df.height} rows, {len(embeddings)} columns.")
+        continue
 
 if __name__ == "__main__":
   main()
