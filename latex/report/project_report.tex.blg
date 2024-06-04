@@ -1,0 +1,5 @@
+[0] Config.pm:307> INFO - This is Biber 2.17
+[0] Config.pm:310> INFO - Logfile is 'project_report.tex.blg'
+[45] biber:340> INFO - === 금  5월 31, 2024, 21:01:18
+[90] Utils.pm:398> ERROR - Cannot find 'project_report.tex.bcf'!
+[91] Biber.pm:135> INFO - ERRORS: 1

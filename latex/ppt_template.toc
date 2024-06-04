@@ -1,6 +1,0 @@
-\beamer@sectionintoc {2}{Project Overview}{3}{0}{1}
-\beamer@sectionintoc {3}{Dataset and Pre-liminary Analysis}{4}{0}{2}
-\beamer@sectionintoc {4}{Data Preprocessing}{5}{0}{3}
-\beamer@sectionintoc {5}{Document Vectorization and Clustering}{7}{0}{4}
-\beamer@sectionintoc {6}{Model Validation and Document Classification}{9}{0}{5}
-\beamer@sectionintoc {7}{Current Progress}{10}{0}{6}

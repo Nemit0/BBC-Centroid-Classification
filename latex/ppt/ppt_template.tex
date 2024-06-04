@@ -1,0 +1,180 @@
+% October 30, 2007
+% Math 589
+
+\documentclass[
+    10pt % font size
+    16:9, % 1920x1080
+]{beamer}
+% \usetheme{default}
+% \usetheme{Boadilla}
+ \usetheme{Madrid}
+% \usetheme{Montpellier}
+% \usetheme{Warsaw}
+% \usetheme{Copenhagen}
+% \usetheme{Goettingen}
+% \usetheme{Hannover}
+% \usetheme{Berkeley}
+ 
+% \usecolortheme{crane}
+ % \beamertemplatesolidbackgroundcolor{craneorange!25}
+ 
+ % Define custom colors
+\definecolor{customGreen}{RGB}{0,128,0} % A medium green
+\definecolor{customDarkGreen}{RGB}{0,100,0} % A darker green
+
+\usepackage{hyperref}
+
+% Apply the custom colors
+\usecolortheme{default} % Start with the default color theme to apply custom colors on top
+\setbeamercolor{structure}{fg=customGreen}
+\setbeamercolor{background canvas}{bg=white} % Set main background to white
+\setbeamercolor{title}{bg=customDarkGreen,fg=white} % Title slide background
+\setbeamercolor{frametitle}{bg=customGreen,fg=white} % Frame titles
+
+% Custom footline with an image on the bottom right
+\addtobeamertemplate{footline}{}{%
+  \hfill%
+  \raisebox{5mm}[0pt][10pt]{%
+    \includegraphics[height=1cm]{kyu_univ_logo.png}%
+  }\hspace*{5mm}
+}
+
+\title{Group 1 Status Report}
+\subtitle{}
+
+\author{Group 1}
+
+\date[June 4, 2024]
+ {June 4, 2024}
+
+\begin{document}
+
+\frame{\titlepage} % # 1
+\section[Outline]{}
+\frame{\tableofcontents}
+
+\section{Project Overview}
+ 
+\frame{
+  \frametitle{Report}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{qrcode_113317029_8b3e83e9dd2107356da06a1449e565a8.png}
+  \end{figure}
+}
+ 
+\frame % # 2
+{
+  \frametitle{Project Overview}
+  \begin{itemize}
+    \item The goal of this project is to train a model that can predict the tag of a given wikipedia document.
+    \item Bag of Words method is used to convert the text data into numerical data.
+    \item Variant of fuzzy c-means clustering algorithm is used with the provided 'Categories' columns as class lables.
+    \item After embedding space is generated, we use a pmf function using centroid of cluster and distance metric to generate a probability distribution.
+    \item Lastly, the probability distribution is used to predict the tag of a given wikipedia document.
+  \end{itemize}
+}
+\section{Dataset and Pre-liminary Analysis}
+\frame
+{
+  \frametitle{Dataset and Pre-liminary Analysis}
+  \begin{itemize}
+    \item \href{https://www.kaggle.com/datasets/jjinho/wikipedia-20230701/data}{Wikipedia Plaintext(23-07-01) Dataset}
+    \item Consist of 6,286,775 articles, titles, text and categories from July 1st 2023 dump
+    \item Dataset consist of 4 columns: 'id', 'title', 'text', 'categories'
+    \item All dataset is saved as .parquet file per starting alphabet/character
+  \end{itemize}
+}
+
+\section{Data Preprocessing}
+\frame
+{
+  \frametitle{Data Preprocessing}
+  \begin{itemize}
+    \item Data is loaded from .parquet files
+    \item Data is cleaned by removing special characters, numbers, and stopwords
+    \item Stopwards are set of words that are considered unimportant in the text data. For stop word, we used nltk package.
+    \item After cleaning, data is converted into lower-case where it's used to generate a unique words list.
+    \item Documents are converted into numerical data using Bag of Words method
+  \end{itemize}
+}
+
+\begin{frame}
+  \frametitle{Bag of Words}
+  \begin{itemize}
+    \item The Bag of Words method converts text data into numerical data by representing each document as a vector of word counts.
+  \end{itemize}
+  \[
+    \mathbf{d} = \begin{bmatrix}
+    f_1 \\
+    f_2 \\
+    \vdots \\
+    f_n
+  \end{bmatrix}
+  \]
+  \begin{itemize}
+    \item Here, \(\mathbf{d}\) is a vector representing a document, and \(f_i\) is the frequency of the \(i\)-th word from the vocabulary in the document.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{tf-idf scoring and minimum frequency}
+  \begin{itemize}
+    \item After BoW Encoding, we calculate tf-idf score for each token and documents.
+    \item We drop tokens with frequency less than 20, and tf-idf score less than 30.
+    \item For tf-idf, we use the following formula:
+    \begin{align}
+      tf(t,d) &= 0.5 + 0.5 \times \frac{f_{t,d}}{\max_{t' \in d} f_{t',d}} \\
+      idf(t) &= \log\left(\frac{N}{n_t}\right) \\
+      tfidf(t,d) &= tf(t,d) \times idf(t)
+    \end{align}
+  \end{itemize}
+\end{frame}
+
+\section{Document Vectorization and Clustering}
+\begin{frame}
+  \frametitle{Document Vectorization and Clustering}
+  \begin{itemize}
+    \item After all documents are vectorized, we apply dimension reduction(CUR decomposition) to reduce the dimension of the data.
+    \item CUR decomposition is utilized by sparse nature of embedded vector.
+    \item Dataset is batched in to 1500 rows per batch, and CUR decomposition is applied to each batch.
+    \item Afterwards, per unique category we may construct a probability distribution using the centroid of the cluster and distance metric.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Document Cluster and probability distribution}
+  \begin{itemize}
+    \item For each unique category, we construct a probability distribution using the centroid of the cluster and distance metric.
+    \item Assuming central-limit theorem, we use a normal distribution to generate the probability distribution.
+    \[
+      p(d) = \frac{1}{\sqrt{2\pi}\sigma}e^{-\frac{(d)^2}{2\sigma^2}}
+    \]
+    Where d is the distance from the centroid, and \(\sigma\) is the variance of the cluster.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Pmf Training}
+  \begin{itemize}
+    \item After generating the probability distribution, we use it to predict the tag of a given wikipedia document.
+    \item We can tune the probability threshhold for accuracy using the cost function:
+    \[
+      J(C_d, C_d') = \frac{\lambda_1|C_d'\setminus C_d| + \lambda_2|C_d\setminus C_d'|}{|C_d\cup C_d'|}
+    \]
+    where $C_d$ is document categories set, and $C_d'$ is predicted categories set.
+    \item Starting from threshold 0, we increase the threshold by some small value until the cost function is minimized.
+  \end{itemize}
+\end{frame}
+
+\section{Current Progress}
+\begin{frame}
+  \frametitle{Current Progress}
+  \begin{itemize}
+    \item Currently generated tf-idf score for all token using 10\% sampled data, and filteered out out tokens with low score.
+    \item CUR decomposition is in process of implementation, and will soon be applied to all data.
+    \item After CUR decomposition, we need to split the data into training and testing sets, and construct a probability distribution for each unique category.
+    \item For efficiency, we plan to implement further computation with rapids library for GPU acceleration, using cuml and cudf, and pytorch.
+  \end{itemize}
+\end{frame}
+\end{document}

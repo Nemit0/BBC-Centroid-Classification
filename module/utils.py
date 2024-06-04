@@ -65,7 +65,7 @@ def retry(times, exceptions=Exception):
         return newfn
     return decorator
 
-def timer(func:Callable) -> Callable:
+def timer(func):
     def wrapper(*args, **kwargs):
         start_time = datetime.now()
         result = func(*args, **kwargs)
@@ -73,5 +73,6 @@ def timer(func:Callable) -> Callable:
         print(f"Function {func.__name__} executed in {end_time - start_time}")
         return result
     return wrapper
+
 
 data_list = [file for file in os.listdir(os.path.join(get_project_root(), "data")) if file.endswith(".parquet") and 'sample' not in file]

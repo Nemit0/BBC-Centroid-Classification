@@ -257,8 +257,6 @@ if __name__ == "__main__":
 
     print(list(word_occurance.values())[:10], list(word_occurance.keys())[:10])
 
-    sys.exit(0)
-
     # Visualize the embeddings using dimension reduction to 2D
     from sklearn.decomposition import PCA
     import matplotlib.pyplot as plt
@@ -272,3 +270,4 @@ if __name__ == "__main__":
     plt.ylabel('Principal Component 2')
     plt.title('PCA of Document Embeddings')
     plt.show()
+    plt.savefig(os.path.join(model_path, 'sample_data_pca.png'))
