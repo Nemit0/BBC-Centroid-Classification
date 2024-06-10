@@ -29,7 +29,7 @@ def clean_and_split_words(text: str, use_stemming: bool = True) -> List[str]:
     - Optionally applies stemming.
     """
     # Convert text to lowercase and remove all non-letter characters
-    text = re.sub(r'[^a-zA-Z\s]', '', text.lower())
+    text = re.sub(r'[^a-zA-Z\s]', ' ', text.lower())
 
     # Split text into words
     words = text.split()
@@ -38,7 +38,7 @@ def clean_and_split_words(text: str, use_stemming: bool = True) -> List[str]:
     stop_words = set(stopwords.words('english'))
 
     # Remove stopwords
-    words = [word for word in words if word not in stop_words]
+    words = [word.strip() for word in words if word not in stop_words]
 
     # Optionally apply stemming
     if use_stemming:
@@ -90,7 +90,7 @@ class BagOfWordsEmbedding:
             case _:
                 raise ValueError(f"Invalid data type: {type}")
 
-    def get_unique_words(self, data:pl.LazyFrame|pl.DataFrame) -> list:
+    def get_unique_words(self, data:pl.LazyFrame|pl.DataFrame, return_word_list=False) -> list:
         """
         Returns a list of unique words from the text data.
         This assumes there is a 'text' column inside the dataframe.
@@ -109,7 +109,8 @@ class BagOfWordsEmbedding:
         word_list = [word for sublist in results for word in sublist] # Flatten list of lists
         unique_words = list(set(word_list))
         unique_words.sort()
-        
+        if return_word_list:
+            return unique_words, word_list
         return unique_words
     
     def load_and_process_data(self, data:str) -> list[str]:
@@ -118,14 +119,15 @@ class BagOfWordsEmbedding:
         This function is designed to be used with ThreadPoolExecutor.
         """
         data_frame = self.load_data(data, self.data_type, lazy=False)
-        return self.get_unique_words(data_frame)
+        return self.get_unique_words(data_frame, return_word_list=True)
     
-    def train(self, max_workers:int=3, k:int=0) -> None:
+    def train(self, max_workers:int=3, k:int=0, tf_idf:float=.0) -> None:
         """
         Read and process the data to get the unique words, which will be used to create BoW embedding.
         The function returns nothing, but it's not executed on __init__ to allow for more flexibility, and potential model loading.
         Uses ThreadPoolExecutor to handle multiple data files.
         The argument k is min threshhold for the word to be included in the unique words of occurence.
+        if given tf_idf, it will be used to calculate the tf-idf of the words.
         """
         _token_map = {}
         if max_workers > 1:
@@ -135,12 +137,16 @@ class BagOfWordsEmbedding:
                 futures = {executor.submit(self.load_and_process_data, data): data for data in self.data_list}
 
                 for future in as_completed(futures):
-                    _unique_word = set(future.result())
+                    _unique_word, word_list = set(future.result())
                     for word in _unique_word:
                         if word in _token_map.keys():
-                            _token_map[word] += 1
+                            _token_map[word]['count'] += 1
+                            _token_map[word]['frequency'] += word_list.count(word)
                         else:
-                            _token_map[word] = 1
+                            _token_map[word] = {
+                                'count': 1,
+                                'frequency': word_list.count(word)
+                            }
                     _unique_word.update(self.unique_words)
                 self.unique_words.extend(list(_unique_word))
                 del _unique_word    
@@ -151,9 +157,13 @@ class BagOfWordsEmbedding:
                 _unique_word = set(self.get_unique_words(self.load_data(data, self.data_type, lazy=False)))
                 for word in _unique_word:
                     if word in _token_map.keys():
-                        _token_map[word] += 1
+                        _token_map[word]['count'] += 1
+                        _token_map[word]['frequency'] += word_list.count(word)
                     else:
-                        _token_map[word] = 1
+                        _token_map[word] = {
+                            'count': 1,
+                            'frequency': word_list.count(word)
+                        }
                 _unique_word.update(self.unique_words)
             self.unique_words.extend(list(_unique_word))
             del _unique_word
@@ -165,9 +175,21 @@ class BagOfWordsEmbedding:
         self.token_map = {word: i for i, word in enumerate(self.unique_words)}
         if k > 0:
             print(f"Removing words with occurence less than {k}. Current unique words: {len(self.unique_words)}")
-            self.unique_words = [word for word in self.unique_words if _token_map[word] >= k]
-            self.token_map = {word: i for i, word in enumerate(self.unique_words)}
-            print(f"New unique words: {len(self.unique_words)}")
+            self.unique_words = [word for word in self.unique_words if _token_map['frequency'] >= k]\
+        
+        if tf_idf > 0:
+            print(f"Calculating tf-idf for the unique words. Current unique words: {len(self.unique_words)}")
+            total_documents = len(self.data_list*1500)
+            for word in self.unique_words:
+                _token_map[word]['tf'] = _token_map[word]['frequency']/len(self.unique_words)
+                _token_map[word]['idf'] = total_documents/_token_map[word]['count']
+                _token_map[word]['tf_idf'] = _token_map[word]['tf'] * _token_map[word]['idf']
+                _token_map = {k:v for k,v in _token_map.items() if v['tf_idf'] >= tf_idf}
+        
+        self.unique_words = list(_token_map.keys())
+        self.output_dim = len(self.unique_words)
+        self.token_map = {word: i for i, word in enumerate(self.unique_words)}
+        print(f"New unique words: {len(self.unique_words)}")
 
         self.output_dim = len(self.unique_words)
         return None
