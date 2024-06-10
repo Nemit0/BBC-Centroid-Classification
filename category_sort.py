@@ -18,7 +18,7 @@ def main():
     category_dict = {category:0 for category in category_list}
     category = Counter(category_dict)
     for file in category_count_list:
-        with open(data_path, file):
+        with open(os.path.join(data_path, file), 'r') as f:
             _category_count = json.load(f)
             category += Counter(_category_count)
     
