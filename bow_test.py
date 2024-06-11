@@ -235,10 +235,7 @@ def main():
             print(f"Loss: {_loss}, Accuracy: {accuracy}")
             print(f"Average loss so far: {np.mean(loss_list)}")
 
-
-
-    
-
+    print(f"Average loss: {np.mean(loss_list)}")
 
 if __name__ == '__main__':
     main()
