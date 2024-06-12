@@ -1,8 +1,8 @@
 import os
 import json
-import json
 import nltk
 import re
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -16,12 +16,36 @@ from rich import print
 
 from sklearn.feature_selection import chi2
 
-def gaussian_pdf(x, variance:np.float128, mean=0):
-    if not isinstance(x, np.float128) or not isinstance(variance, np.float128) or not isinstance(mean, np.float128):
-        x = np.float128(x)
-        variance = np.float128(variance)
-        mean = np.float128(mean)
-    return np.float128((1 / np.sqrt(2 * np.pi * variance)) * np.exp(-0.5 * ((x - mean) ** 2) / (variance+0.00001)))
+def cosine_similarity(a:np.array, b:np.array) -> float:
+    """
+    Returns the cosine similarity between two vectors.
+    """
+    if not isinstance(a, np.ndarray) or not isinstance(b, np.ndarray):
+        warnings.warn("Input vectors are not numpy arrays. Trying to convert to numpy arrays.")
+        try:
+            a = np.array(a)
+            b = np.array(b)
+        except:
+            raise ValueError("Input vectors cannot be converted to numpy arrays.")
+    return np.divide(np.dot(a, b), (np.linalg.norm(a) * np.linalg.norm(b)), dtype=np.float128)
+
+def euclidean_distance(a:np.array, b:np.array) -> float:
+    """
+    Returns the euclidean distance between two vectors.
+    """
+    if not isinstance(a, np.ndarray) or not isinstance(b, np.ndarray):
+        warnings.warn("Input vectors are not numpy arrays. Trying to convert to numpy arrays.")
+        try:
+            a = np.array(a)
+            b = np.array(b)
+        except:
+            raise ValueError("Input vectors cannot be converted to numpy arrays.")
+    return np.linalg.norm(a - b)
+
+def gaussian_pdf(x, variance, mean=0):
+    if variance < 1e-10:  # handle small variance to avoid division by zero
+        variance += 1e-10
+    return (1 / np.sqrt(2 * np.pi * variance)) * np.exp(-0.5 * ((x - mean) ** 2) / variance)
 
 def clean_and_split_words(text: str, use_stemming: bool = False) -> list:
     """
@@ -46,6 +70,9 @@ def generate_ngrams(words, ngram_range):
         for i in range(len(words) - n + 1):
             ngrams_list.append(' '.join(words[i:i + n]))
     return ngrams_list
+
+def normalize_vector(vector: np.ndarray) -> np.ndarray:
+    return np.divide(vector, np.linalg.norm(vector))
 
 class TfIdfVectorizer:
     def __init__(self, sublinear_tf=True, min_df=5, norm='l2', ngram_range=(1, 2), stop_word_lang='english'):
@@ -111,6 +138,7 @@ def main():
     root_path = os.path.join(get_project_root(), 'data', 'bbc')
     text_path = os.path.join(root_path, 'raw_text')
 
+    warnings.filterwarnings("ignore")
     class_id_map = {
         'business': 0,
         'entertainment': 1,
@@ -118,7 +146,6 @@ def main():
         'sport': 3,
         'tech': 4
     }
-
     df_dict = {
         'class': [],
         'text': [],
@@ -126,6 +153,7 @@ def main():
         'title': [],
         'filename': []
     }
+
     # Load the data into dataframe
     for _class in class_id_map.keys():
         _path = os.path.join(text_path, _class)
@@ -140,108 +168,109 @@ def main():
             df_dict['classid'].append(class_id_map[_class])
             df_dict['title'].append(title)
             df_dict['filename'].append(_text)
-
+    
     df = pd.DataFrame(df_dict)
+    print(f"{len(df)} Articles loaded")
+    df_norm = df.copy()
+
     vectorizer = TfIdfVectorizer(norm=None, ngram_range=(1,2))
+    vectorizernorm = TfIdfVectorizer(norm='l2', ngram_range=(1,2))
+
     texts = df['text']
     features = vectorizer.fit_transform(texts)
-    features.shape
-    print(features)
-    print(features.shape)
-    print(len(vectorizer.token_map))
+    features_norm = vectorizernorm.fit_transform(texts)
+    print(f"Shape of the feature matrix: {features.shape}")
 
-    N = 5
-    for category, category_id in sorted(class_id_map.items()):
-        features_chi2 = chi2(features, df['classid'] == category_id)
-        indices = np.argsort(features_chi2[0])
-        feature_names = np.array(list(vectorizer.token_map.keys()))[indices]
-        unigrams = [v for v in feature_names if len(v.split(' ')) == 1]
-        bigrams = [v for v in feature_names if len(v.split(' ')) == 2]
-        print("# '{}':".format(category))
-        print("  . Most correlated unigrams:\n       . {}".format('\n       . '.join(unigrams[-N:])))
-        print("  . Most correlated bigrams:\n       . {}".format('\n       . '.join(bigrams[-N:])))
+    # print(f"Calculating Chi2 for feature-category correlation analysis")
+    # N = 5
+    # for category, category_id in sorted(class_id_map.items()):
+    #     features_chi2 = chi2(features, df['classid'] == category_id)
+    #     indices = np.argsort(features_chi2[0])
+    #     feature_names = np.array(list(vectorizer.token_map.keys()))[indices]
+    #     unigrams = [v for v in feature_names if len(v.split(' ')) == 1]
+    #     bigrams = [v for v in feature_names if len(v.split(' ')) == 2]
+    #     print("# '{}':".format(category))
+    #     print("  . Most correlated unigrams:\n       . {}".format('\n       . '.join(unigrams[-N:])))
+    #     print("  . Most correlated bigrams:\n       . {}".format('\n       . '.join(bigrams[-N:])))
+    # print(f"Calculating Chi2 for feature-category correlation analysis (Normalized)")
+    # N = 5
+    # for category, category_id in sorted(class_id_map.items()):
+    #     features_chi2 = chi2(features_norm, df['classid'] == category_id)
+    #     indices = np.argsort(features_chi2[0])
+    #     feature_names = np.array(list(vectorizernorm.token_map.keys()))[indices]
+    #     unigrams = [v for v in feature_names if len(v.split(' ')) == 1]
+    #     bigrams = [v for v in feature_names if len(v.split(' ')) == 2]
+    #     print("# '{}':".format(category))
+    #     print("  . Most correlated unigrams:\n       . {}".format('\n       . '.join(unigrams[-N:])))
+    #     print("  . Most correlated bigrams:\n       . {}".format('\n       . '.join(bigrams[-N:])))
 
     df['embeddings'] = list(features)
+    df_norm['embeddings'] = list(features_norm)
     df.set_index('filename', inplace=True)
-    print(df.head())
+    df_norm.set_index('filename', inplace=True)
+    print("All dataframe loaded with embeddings")
+    print(f"Embedding Dimension:{df['embeddings'][0].shape}")
 
     # Start calculating centroind and variance from test dataset
     if isinstance(df.iloc[0]['embeddings'], list):
         df['embeddings'] = df['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
+        df_norm['embeddings'] = df_norm['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
 
     train_test_ratio = 0.8
-    train_size = int(len(df) * train_test_ratio)
-    # Shuffle dataset
-    df = df.sample(frac=1)
-    train_df = df.iloc[:train_size]
-    test_df = df.iloc[train_size:]
+    df = df.sample(frac=1, random_state=1)
+    df_norm = df_norm.sample(frac=1, random_state=1)
+    train_df = df.iloc[:int(np.floor(train_test_ratio * len(df)))]
+    test_df = df.iloc[int(np.floor(train_test_ratio * len(df))+1):]
+    train_df_norm = df_norm.iloc[:int(np.floor(train_test_ratio * len(df_norm)))]
+    test_df_norm = df_norm.iloc[int(np.floor(train_test_ratio * len(df_norm))+1):]
+    print(f"Training dataset size: {train_df.shape[0]}, Testing dataset size: {test_df.shape[0]}")
 
-    centroid_df = train_df.groupby('classid')['embeddings'].apply(lambda x: np.mean(np.stack(x), axis=0)).reset_index()
-
+    centroid_df = train_df.groupby('classid')['embeddings'].apply(lambda x: np.mean(np.stack(x, dtype=np.float128), axis=0, dtype=np.float128)).reset_index()
     centroid_df['embeddings'] = centroid_df['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
-
     centroid_df.columns = ['classid', 'centroid']
-    print(centroid_df.head())
-
-    df_test = df.copy()
-
-    df['distance_to_centroid_0'] = df['embeddings'].apply(lambda x: np.float128(np.linalg.norm(x - centroid_df.loc[0]['centroid'])))
-    df['distance_to_centroid_1'] = df['embeddings'].apply(lambda x: np.float128(np.linalg.norm(x - centroid_df.loc[1]['centroid'])))
-    df['distance_to_centroid_2'] = df['embeddings'].apply(lambda x: np.float128(np.linalg.norm(x - centroid_df.loc[2]['centroid'])))
-    df['distance_to_centroid_3'] = df['embeddings'].apply(lambda x: np.float128(np.linalg.norm(x - centroid_df.loc[3]['centroid'])))
-    df['distance_to_centroid_4'] = df['embeddings'].apply(lambda x: np.float128(np.linalg.norm(x - centroid_df.loc[4]['centroid'])))
-
-
-    train_df = df.iloc[:train_size]
-    test_df = df.iloc[train_size:]
-
-    print(df.head())
+    centroid_df_norm = train_df_norm.groupby('classid')['embeddings'].apply(lambda x: np.mean(np.stack(x, dtype=np.float128), axis=0, dtype=np.float128)).reset_index()
+    centroid_df_norm['embeddings'] = centroid_df_norm['embeddings'].apply(lambda x: normalize_vector(np.array(x, dtype=np.float128)))
+    centroid_df_norm.columns = ['classid', 'centroid']
+    print("Centroid calculated")
 
     for i in range(5):
-        # Filter df for the current category
+        train_df[f"distance_to_centroid_{i}"] = train_df['embeddings'].apply(lambda x: euclidean_distance(x, centroid_df.iloc[i]['centroid']))
+        test_df[f"distance_to_centroid_{i}"] = test_df['embeddings'].apply(lambda x: euclidean_distance(x, centroid_df.iloc[i]['centroid']))
+        train_df_norm[f"distance_to_centroid_{i}"] = train_df_norm['embeddings'].apply(lambda x: np.divide(1, cosine_similarity(x, centroid_df_norm.iloc[i]['centroid']), dtype=np.float128))
+        test_df_norm[f"distance_to_centroid_{i}"] = test_df_norm['embeddings'].apply(lambda x: np.divide(1, cosine_similarity(x, centroid_df_norm.iloc[i]['centroid']), dtype=np.float128))
+
+    print(test_df_norm.head())
+    for i in range(5):
         category_mask = train_df['classid'] == i
-        
-        # Calculate variance of 'distance_to_centroid_i' for this category
-        variance = np.var(train_df.loc[category_mask, f"distance_to_centroid_{i}"])
-        
-        # Assign calculated variance to the correct entry in centroid_df
         centroid_df.loc[centroid_df['classid'] == i, 'variance'] = np.var(train_df.loc[category_mask, f"distance_to_centroid_{i}"])
+        category_mark_norm = train_df_norm['classid'] == i
+        centroid_df_norm.loc[centroid_df_norm['classid'] == i, 'variance'] = np.var(train_df_norm.loc[category_mark_norm, f"distance_to_centroid_{i}"])
+    
+    for i in range(5):
+        train_df[f"pmf_cat{i}"] = train_df[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df.iloc[i]['variance']))
+        test_df[f"pmf_cat{i}"] = test_df[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df.iloc[i]['variance']))
+        train_df_norm[f"pmf_cat{i}"] = train_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df_norm.iloc[i]['variance']))
+        test_df_norm[f"pmf_cat{i}"] = test_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df_norm.iloc[i]['variance']))
 
-    df['pmf_cat0'] = df['distance_to_centroid_0'].apply(lambda x: float(gaussian_pdf(x, centroid_df.iloc[0]['variance'])))
-    df['pmf_cat1'] = df['distance_to_centroid_1'].apply(lambda x: float(gaussian_pdf(x, centroid_df.iloc[1]['variance'])))
-    df['pmf_cat2'] = df['distance_to_centroid_2'].apply(lambda x: float(gaussian_pdf(x, centroid_df.iloc[2]['variance'])))
-    df['pmf_cat3'] = df['distance_to_centroid_3'].apply(lambda x: float(gaussian_pdf(x, centroid_df.iloc[3]['variance'])))
-    df['pmf_cat4'] = df['distance_to_centroid_4'].apply(lambda x: float(gaussian_pdf(x, centroid_df.iloc[4]['variance'])))
+    distance_cols = [col for col in train_df.columns if "distance_to_centroid_" in col]
+    pmf_cols = [col for col in train_df.columns if "pmf_cat" in col]
+    data = train_df.copy()
+    # Assess using the distance-based classification
+    test_df['closest_centroid'] = test_df[distance_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
+    test_df_norm['closest_centroid'] = test_df_norm[distance_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
+    test_df['distance_correct'] = (test_df['closest_centroid'] == test_df['classid']).astype(int)
+    test_df_norm['distance_correct'] = (test_df_norm['closest_centroid'] == test_df_norm['classid']).astype(int)
+    print(f"Accuracy of distance-based classification: {test_df['distance_correct'].mean():.2f}")
+    print(f"Accuracy of distance-based classification (Normalized): {test_df_norm['distance_correct'].mean():.2f}")
+    # Assess using the PMF-based classification
+    test_df['pmf_predict'] = test_df[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    test_df_norm['pmf_predict'] = test_df_norm[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    test_df['pmf_correct'] = (test_df['pmf_predict'] == test_df['classid']).astype(int)
+    test_df_norm['pmf_correct'] = (test_df_norm['pmf_predict'] == test_df_norm['classid']).astype(int)
+    print(f"Accuracy of PMF-based classification: {test_df['pmf_correct'].mean():.2f}")
+    print(f"Accuracy of PMF-based classification (Normalized): {test_df_norm['pmf_correct'].mean():.2f}")
 
-    train_df = df.iloc[:train_size]
-    test_df = df.iloc[train_size:]
-
-    data = df.copy().iloc[train_size:]
-    distance_cols = [col for col in data.columns if "distance_to_centroid_" in col]
-    pmf_cols = [col for col in data.columns if "pmf_cat" in col]
-
-    # Task 1: Finding the closest centroid
-    data['closest_centroid'] = data[distance_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
-
-    # Task 2: Finding the PMF category with the highest probability
-    data['pmf_predict'] = data[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
-
-    # Task 3: Comparison Columns
-    data['distance_correct'] = (data['closest_centroid'] == data['classid']).astype(int)
-    data['pmf_correct'] = (data['pmf_predict'] == data['classid']).astype(int)
-
-    # Displaying the updated DataFrame with the new columns
-    data[['classid', 'closest_centroid', 'pmf_predict', 'distance_correct', 'pmf_correct']].head()
-
-    distance_accuracy = data['distance_correct'].mean()
-    pmf_col_accuracy = data['pmf_correct'].mean()
-    print(f"Accuracy of distance-based classification: {distance_accuracy:.2f}")
-    print(f"Accuracy of PMF-based classification: {pmf_col_accuracy:.2f}")
-
-    data['top2_distance'] = data[distance_cols].apply(lambda x: list(np.argsort(x.values)[:2]), axis=1)
-
-    # Task 2: Top 2 categories based on PMF
-    data['top2_pmf'] = data[pmf_cols].apply(lambda x: list(np.argsort(-x.values)[:2]), axis=1)
-
+    test_df.to_csv(os.path.join(root_path, 'test_df.csv'))
+    test_df_norm.to_csv(os.path.join(root_path, 'test_df_norm.csv'))
 if __name__ == "__main__":
     main()
