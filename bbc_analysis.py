@@ -270,7 +270,33 @@ def main():
     print(f"Accuracy of PMF-based classification: {test_df['pmf_correct'].mean():.2f}")
     print(f"Accuracy of PMF-based classification (Normalized): {test_df_norm['pmf_correct'].mean():.2f}")
 
-    test_df.to_csv(os.path.join(root_path, 'test_df.csv'))
-    test_df_norm.to_csv(os.path.join(root_path, 'test_df_norm.csv'))
+    category_threshold = {i : 0 for i in range(5)}
+    category_threshold_norm = {i : 0 for i in range(5)}
+    # Assess train_df to find the threshold for each category
+    train_df['pmf_predict'] = train_df[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df['pmf_correct'] = (train_df['pmf_predict'] == train_df['classid']).astype(int)
+    train_df_norm['pmf_predict'] = train_df_norm[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df_norm['pmf_correct'] = (train_df_norm['pmf_predict'] == train_df_norm['classid']).astype(int)
+
+    # Get incorrect predictions
+    incorrect_predictions = train_df[train_df['pmf_correct'] == 0]
+    incorrect_predictions_norm = train_df_norm[train_df_norm['pmf_correct'] == 0]
+
+    # Check every category is contained in incorrect predictions
+    for i in range(5):
+        category_mask = incorrect_predictions['classid'] == i
+        category_threshold[i] = incorrect_predictions.loc[category_mask, f"pmf_cat{i}"].max()
+        category_mark_norm = incorrect_predictions_norm['classid'] == i
+        category_threshold_norm[i] = incorrect_predictions_norm.loc[category_mark_norm, f"pmf_cat{i}"].max()
+    print(category_threshold)
+    print(category_threshold_norm)
+
+    for i in range(5):
+        test_df[f"candinates"] = test_df[pmf_cols].apply(lambda x: x[x > category_threshold[i]].index.tolist(), axis=1)
+        test_df_norm[f"candinates"] = test_df_norm[pmf_cols].apply(lambda x: x[x > category_threshold_norm[i]].index.tolist(), axis=1)
+    
+    print(test_df.head())
+    print(test_df_norm.head())
+    
 if __name__ == "__main__":
     main()
