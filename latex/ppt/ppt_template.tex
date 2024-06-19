@@ -14,6 +14,7 @@
 % \usetheme{Goettingen}
 % \usetheme{Hannover}
 % \usetheme{Berkeley}
+\usepackage{booktabs}
  
 % \usecolortheme{crane}
  % \beamertemplatesolidbackgroundcolor{craneorange!25}
@@ -60,7 +61,8 @@
   \frametitle{Project Objectives}
   \begin{itemize}
     \item The goal of this project is classify document per category on given dataset.
-    \item 
+    \item Document Embedding Model: Tf-Idf Vectorizer
+    \item Classification Model: Centroid Classification
   \end{itemize}
 }
 \section{Dataset and Pre-liminary Analysis}
@@ -69,8 +71,13 @@
   \frametitle{Dataset and Pre-liminary Analysis}
   \begin{itemize}
     \item \href{http://mlg.ucd.ie/datasets/bbc.html}{BBC ML Dataset}
-    \item Consist of 62225 articles, with categories: 'business', 'entertainment', 'politics', 'sport', 'tech'
+    \item Consist of 2225 articles, with categories: 'business', 'entertainment', 'politics', 'sport', 'tech'
+    \item Dataset was changed from Wikipedia to BBC dataset due to complication in model training and dataset processing.
   \end{itemize}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{categories.png}
+  \end{figure}
 }
 
 \section{Data Preprocessing}
@@ -78,59 +85,76 @@
 {
   \frametitle{Data Preprocessing}
   \begin{itemize}
-    \item Data is loaded from .parquet files
-    \item Data is cleaned by removing special characters, numbers, and stopwords
-    \item Stopwards are set of words that are considered unimportant in the text data. For stop word, we used nltk package.
-    \item After cleaning, data is converted into lower-case where it's used to generate a unique words list.
-    \item Documents are converted into numerical data using Bag of Words method
+    \item Category-Token Chi2 test
   \end{itemize}
+  \begin{table}
+    \centering
+    \begin{tabular}{@{}llllll@{}}
+        \toprule
+        Category       & 1st       & 2nd      & 3rd      \\ \midrule
+        Business       & oil       & bank     & growth   \\
+        Entertainment  & award     & singer   & awards   \\
+        Politics       & tory      & blair    & party    \\
+        Sport          & win       & injury   & coach    \\
+        Tech           & digital   & computer & software \\
+        \bottomrule
+    \end{tabular}
+  \end{table}
 }
 
 \begin{frame}
-  \frametitle{Bag of Words}
+  \frametitle{Tf-Idf Embedding}
   \begin{itemize}
-    \item The Bag of Words method converts text data into numerical data by representing each document as a vector of word counts.
-  \end{itemize}
-  \[
-    \mathbf{d} = \begin{bmatrix}
-    f_1 \\
-    f_2 \\
-    \vdots \\
-    f_n
-  \end{bmatrix}
-  \]
-  \begin{itemize}
-    \item Here, \(\mathbf{d}\) is a vector representing a document, and \(f_i\) is the frequency of the \(i\)-th word from the vocabulary in the document.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}
-  \frametitle{tf-idf scoring and minimum frequency}
-  \begin{itemize}
-    \item After BoW Encoding, we calculate tf-idf score for each token and documents.
-    \item We drop tokens with frequency less than 20, and tf-idf score less than 30.
-    \item For tf-idf, we use the following formula:
+    \item Instead of plain BoW encoding, we use tf-idf scoring to encode the documents.
+    \item The token value is calculated as follows:
     \begin{align}
-      tf(t,d) &= 0.5 + 0.5 \times \frac{f_{t,d}}{\max_{t' \in d} f_{t',d}} \\
+      tf(t,d) &= \frac{f_{t,d}}{\sum_{t' \in d} f_{t',d}} \\
       idf(t) &= \log\left(\frac{N}{n_t}\right) \\
       tfidf(t,d) &= tf(t,d) \times idf(t)
     \end{align}
   \end{itemize}
 \end{frame}
 
-\section{Document Vectorization and Clustering}
+\begin{frame}
+  \frametitle{Tf-Idf Embedding}
+  \begin{itemize}
+    \item Prior to embedding, unique words(unigrams and bigrams) are extracted from the dataset to be used as tokenizer.
+    \item The tokens are filtered based on $\sum_{d \in D} tfidf(t,d)$, to filter out tokens with low occurance, in our project it's set to 5. Resulting token size is 17989.
+    \item For each document, the token value(vector index) in the vector is given by tf-idf scoring of document.
+  \end{itemize}
+\end{frame}
+
+\section{Centroid/Variance Calculation}
 \begin{frame}
   \frametitle{Document Vectorization and Clustering}
   \begin{itemize}
-    \item After all documents are vectorized, we apply dimension reduction(CUR decomposition) to reduce the dimension of the data.
-    \item CUR decomposition is utilized by sparse nature of embedded vector.
-    \item Dataset is batched in to 1500 rows per batch, and CUR decomposition is applied to each batch.
-    \item Afterwards, per unique category we may construct a probability distribution using the centroid of the cluster and distance metric.
+    \item With the documents embedded, we now calculate the centroid and variance of each categories.
+    \item Centroid is the main metric for the cluster, and variance is calculated to use gaussian distribution for probability distribution.
+    \item No dimension reduction is applied to minimize information loss.
+    \item We evaluate the model on normalized dataset and non-normalized dataset. For normalized dataset, we use distance matric $\frac{1}{\cos(\theta)}$, where $\cos(\theta)$ is the cosine similarity, and for non-normalized dataset, we use euclidean distance.
   \end{itemize}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Document Cluster and probability distribution}
+  \frametitle{Centroid Classification}
+  \begin{itemize}
+    \item Centroid classification is a simple classification method that uses the centroid and distance metric to classify the document.
+    \item Our project uses 3 type of Centroid Classification: Nearest Centroid, Gaussian Probability Distribution, and Logistic Probability Distribution.
+    \item The category prediction is generated by calculating highest score of probability distribution, or lowest distance from the centroid.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Nearest Centroid}
+  \begin{itemize}
+    \item The simplest centroid classification method, where the document is classified based on the nearest centroid.
+    \item The distance metric is calculated using the distance metric, and the document is classified based on the nearest centroid.
+    \item The centroid is calculated as the mean of the document vectors in the cluster.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Gaussian Probability Distribution}
   \begin{itemize}
     \item For each unique category, we construct a probability distribution using the centroid of the cluster and distance metric.
     \item Assuming central-limit theorem, we use a normal distribution to generate the probability distribution.
@@ -142,26 +166,35 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Pmf Training}
+  \frametitle{Logistic Probability Distribution}
   \begin{itemize}
-    \item After generating the probability distribution, we use it to predict the tag of a given wikipedia document.
+    \item Similar to Gaussian Probability Distribution, but instead of using normal distribution, we use logistic distribution.
+    \[
+      p(d) = \frac{1}{1+e^{-\alpha d}}
+    \]
+    Where d is the distance from the centroid. We use $\alpha$ as a hyperparameter to tune the probability distribution, and it's set to 0.5.
+    \item Logistic is used to generate a more smooth probability distribution, and is more robust to outliers.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Multi-Category Classification}
+  \begin{itemize}
+    \item For multi-category classification, we use the probability distribution to predict the category of the document.
     \item We can tune the probability threshhold for accuracy using the cost function:
     \[
       J(C_d, C_d') = \frac{\lambda_1|C_d'\setminus C_d| + \lambda_2|C_d\setminus C_d'|}{|C_d\cup C_d'|}
     \]
     where $C_d$ is document categories set, and $C_d'$ is predicted categories set.
-    \item Starting from threshold 0, we increase the threshold by some small value until the cost function is minimized.
+    \item Starting from threshold 0, we increase the threshold by a learning rate value until the cost function is minimized.
+    \item We generate a candidate category for both pmf value using trained threshold, and we simply choose second closest centroid for Closest Centroid.
   \end{itemize}
 \end{frame}
 
-\section{Current Progress}
 \begin{frame}
-  \frametitle{Current Progress}
+  \frametitle{Evaluation}
   \begin{itemize}
-    \item Currently generated tf-idf score for all token using 10\% sampled data, and filteered out out tokens with low score.
-    \item CUR decomposition is in process of implementation, and will soon be applied to all data.
-    \item After CUR decomposition, we need to split the data into training and testing sets, and construct a probability distribution for each unique category.
-    \item For efficiency, we plan to implement further computation with rapids library for GPU acceleration, using cuml and cudf, and pytorch.
+    \item 
   \end{itemize}
 \end{frame}
 \end{document}

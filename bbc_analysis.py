@@ -16,44 +16,7 @@ from tqdm import tqdm
 
 from module.utils import get_project_root
 
-# from sklearn.feature_selection import chi2
-
-def chi2(X, y):
-    # Label binarization without sklearn
-    classes = sorted(set(y))
-    class_to_index = {c: i for i, c in enumerate(classes)}
-    Y = [[1 if class_to_index[cls] == i else 0 for i in range(len(classes))] for cls in y]
-    
-    # Handling when Y has only one class
-    if len(classes) == 1:
-        Y = [[1-yi[0], yi[0]] for yi in Y]
-    
-    # Sparse matrix dot product
-    def sparse_dot_product(A, B):
-        # Assuming A and B are lists of lists (dense format)
-        return [[sum(a * b for a, b in zip(row, col)) for col in zip(*B)] for row in A]
-    
-    # Converting observed to dense matrix if it's a single class output
-    observed = sparse_dot_product(list(map(list, zip(*Y))), X)
-    
-    # Summation over rows and columns
-    feature_count = [sum(feature) for feature in zip(*X)]
-    class_prob = [sum(yi) / len(Y) for yi in zip(*Y)]
-    
-    # Expected frequency calculation
-    expected = sparse_dot_product([[cp] for cp in class_prob], [feature_count])
-    
-    # Chi-square calculation
-    def chi_square(observed, expected):
-        chi2_stat = 0
-        for i, obs_row in enumerate(observed):
-            exp_row = expected[i]
-            for obs_val, exp_val in zip(obs_row, exp_row):
-                if exp_val > 0:  # To avoid division by zero
-                    chi2_stat += (obs_val - exp_val) ** 2 / exp_val
-        return chi2_stat
-    
-    return chi_square(observed, expected)
+from sklearn.feature_selection import chi2
 
 def cosine_similarity(a:np.array, b:np.array) -> float:
     """
@@ -288,6 +251,7 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
         df_norm['embeddings'] = df_norm['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
 
     train_test_ratio = 0.7
+    print(random_seed)
     df = df.sample(frac=1, random_state=random_seed)
     df_norm = df_norm.sample(frac=1, random_state=random_seed)
     train_df = df.iloc[:int(np.floor(train_test_ratio * len(df)))]
@@ -354,7 +318,7 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
     print(f"Accuracy of PMF2-based classification (Normalized): {test_df_norm['pmftwo_predict'].mean():.2f}")
 
     if not multiple_category:
-        return test_df['distance_correct'], test_df_norm['distance_correct'], test_df['pmf_correct'], test_df_norm['pmf_correct'], test_df['pmftwo_predict'], test_df_norm['pmftwo_predict']
+        return test_df['distance_correct'].mean(), test_df_norm['distance_correct'].mean(), test_df['pmf_correct'].mean(), test_df_norm['pmf_correct'].mean(), test_df['pmftwo_predict'].mean(), test_df_norm['pmftwo_predict'].mean()
     
     category_threshold = {i : 0 for i in range(5)}
     category_threshold_norm = {i : 0 for i in range(5)}
@@ -465,7 +429,7 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
     return test_df['pmf_correct'].mean(), test_df_norm['pmf_correct'].mean()
 
 if __name__ == "__main__":
-    test_size = 100
+    test_size = 50
     accuracy = []
     accuracy_norm = []
     accuracy2 = []
@@ -473,8 +437,9 @@ if __name__ == "__main__":
     accuracy3 = []
     accuracy3_norm = []
     test_rand_array = [random.randint(0, 100) for i in range(test_size)]
+    print(test_rand_array)
     for seed in tqdm(test_rand_array):
-        _distance_acc, _distance_acc_norm, _pmf_acc, _pmf_acc_norm, _pmf2_acc, _pmf2_acc_norm = main(rand_seed=seed, multiple_category=False)
+        _distance_acc, _distance_acc_norm, _pmf_acc, _pmf_acc_norm, _pmf2_acc, _pmf2_acc_norm = main(random_seed=seed, multiple_category=False)
         accuracy.append(_distance_acc)
         accuracy_norm.append(_distance_acc_norm)
         accuracy2.append(_pmf_acc)
@@ -491,7 +456,15 @@ if __name__ == "__main__":
         'logistic_dist_norm':accuracy3_norm
     })
 
-    df_melt = _df.melt(var_name='Accuracy Type', value_name='Accuracy Value')
+    print(_df.head())
+    print(f"Averaged Accuracy for Shortest Distance: {np.mean(accuracy):.2f}")
+    print(f"Averaged Accuracy for Shortest Distance (Normalized): {np.mean(accuracy_norm):.2f}")
+    print(f"Averaged Accuracy for Gaussian Distribution: {np.mean(accuracy2):.2f}")
+    print(f"Averaged Accuracy for Gaussian Distribution (Normalized): {np.mean(accuracy2_norm):.2f}")
+    print(f"Averaged Accuracy for Logistic Distribution: {np.mean(accuracy3):.2f}")
+    print(f"Averaged Accuracy for Logistic Distribution (Normalized): {np.mean(accuracy3_norm):.2f}")
+
+    df_melt = _df.melt(var_name='Accuracy Type', value_name='Accuracy Value')   
     sns.boxplot(x='Accuracy Type', y='Accuracy Value', data=df_melt)
     plt.show()
     plt.savefig('bbc_analysis.png')
