@@ -1,6 +1,4 @@
 import os
-import json
-import nltk
 import re
 import warnings
 import random
@@ -10,12 +8,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from module.utils import get_project_root
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from typing import List, Iterable
 from rich import print
 from tqdm import tqdm
+
+from module.utils import get_project_root
 
 from sklearn.feature_selection import chi2
 
@@ -50,7 +49,7 @@ def gaussian_pdf(x:float, variance:float, mean:float=0.0) -> float:
         variance += 1e-10
     return (1 / np.sqrt(2 * np.pi * variance)) * np.exp(-0.5 * ((x - mean) ** 2) / variance)
 
-def logistic(x:float, alpha:float=1.0) -> float:
+def logistic(x:float, alpha:float=0.5) -> float:
     return 1 / np.exp(alpha * x)
 
 def cost(a, b) -> float:
@@ -399,6 +398,8 @@ def main(random_seed:int=42, *args, **kwargs) -> tuple:
 
     test_df['candidate_category'] = test_df.apply(lambda x: x['pmf_predict'] if x[f"pmf_cat{x['pmf_predict']}"] >= category_threshold[x['pmf_predict']] else x['classid'], axis=1)
     test_df_norm['candidate_category'] = test_df_norm.apply(lambda x: x['pmf_predict'] if x[f"pmf_cat{x['pmf_predict']}"] >= category_threshold_norm[x['pmf_predict']] else x['classid'], axis=1)
+    test_df['candidate_category_2'] = test_df.apply(lambda x: x['pmftwo_predict'] if x[f"pmftwo_cat{x['pmftwo_predict']}"] >= category_threshold_2[x['pmftwo_predict']] else x['classid'], axis=1)
+    test_df_norm['candidate_category_2'] = test_df_norm.apply(lambda x: x['pmftwo_predict'] if x[f"pmftwo_cat{x['pmftwo_predict']}"] >= category_threshold_2_norm[x['pmftwo_predict']] else x['classid'], axis=1)
 
     # PMF columns in your DataFrame
     pmf_columns = [f'pmf_cat{i}' for i in range(5)]
