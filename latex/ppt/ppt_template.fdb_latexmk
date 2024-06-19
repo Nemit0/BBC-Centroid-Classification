@@ -1,7 +1,7 @@
 # Fdb version 3
-["pdflatex"] 1717465540 "/home/nemit/Documents/mlgroup1/latex/ppt/ppt_template.tex" "ppt_template.pdf" "ppt_template" 1717465541
+["pdflatex"] 1718789525 "/home/nemit/Documents/mlgroup1/latex/ppt/ppt_template.tex" "ppt_template.pdf" "ppt_template" 1718789526
   "/etc/texmf/web2c/texmf.cnf" 1711083170 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/nemit/Documents/mlgroup1/latex/ppt/ppt_template.tex" 1717465540 6724 d1e1eec0e20a1fadd5e8c077ffddae15 ""
+  "/home/nemit/Documents/mlgroup1/latex/ppt/ppt_template.tex" 1718789525 5916 4b39c8e8cc167b1242e5739b17f22a6c ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -204,12 +204,11 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1712478329 4073795 a82a847ac97773bf4a607ab050efa3a1 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1714014072 1484782 01c68a2288fd61b01e79c50ff20ca4fc ""
   "kyu_univ_logo.png" 1712478691 235448 36ed1ac67ddafd060ee596d11a9f8413 ""
-  "ppt_template.aux" 1717465541 4267 b677b609d0ae553fed8994032d888b51 "pdflatex"
-  "ppt_template.nav" 1717465541 2343 d7c4b7f66cc7391d65e40e882522de3f "pdflatex"
-  "ppt_template.out" 1717465541 920 377382e4c14572ca96ba53e65efb7e8a "pdflatex"
-  "ppt_template.tex" 1717465540 6724 d1e1eec0e20a1fadd5e8c077ffddae15 ""
-  "ppt_template.toc" 1717465541 301 69cc0c12ddc88d3cc9c2911afaac9e55 "pdflatex"
-  "qrcode_113317029_8b3e83e9dd2107356da06a1449e565a8.png" 1717464418 53553 29bd420f3a7990beba092190cef57e59 ""
+  "ppt_template.aux" 1718789526 4139 1545fb317d2ea6aecd91b59d4db8d3d5 "pdflatex"
+  "ppt_template.nav" 1718789526 2251 6cfdb7ecc89425ee58be71c354e60936 "pdflatex"
+  "ppt_template.out" 1718789526 920 377382e4c14572ca96ba53e65efb7e8a "pdflatex"
+  "ppt_template.tex" 1718789525 5916 4b39c8e8cc167b1242e5739b17f22a6c ""
+  "ppt_template.toc" 1718789526 301 1f858b81e7e8d160e63fa535f73d19f8 "pdflatex"
   (generated)
   "ppt_template.aux"
   "ppt_template.log"

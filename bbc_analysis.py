@@ -16,7 +16,44 @@ from tqdm import tqdm
 
 from module.utils import get_project_root
 
-from sklearn.feature_selection import chi2
+# from sklearn.feature_selection import chi2
+
+def chi2(X, y):
+    # Label binarization without sklearn
+    classes = sorted(set(y))
+    class_to_index = {c: i for i, c in enumerate(classes)}
+    Y = [[1 if class_to_index[cls] == i else 0 for i in range(len(classes))] for cls in y]
+    
+    # Handling when Y has only one class
+    if len(classes) == 1:
+        Y = [[1-yi[0], yi[0]] for yi in Y]
+    
+    # Sparse matrix dot product
+    def sparse_dot_product(A, B):
+        # Assuming A and B are lists of lists (dense format)
+        return [[sum(a * b for a, b in zip(row, col)) for col in zip(*B)] for row in A]
+    
+    # Converting observed to dense matrix if it's a single class output
+    observed = sparse_dot_product(list(map(list, zip(*Y))), X)
+    
+    # Summation over rows and columns
+    feature_count = [sum(feature) for feature in zip(*X)]
+    class_prob = [sum(yi) / len(Y) for yi in zip(*Y)]
+    
+    # Expected frequency calculation
+    expected = sparse_dot_product([[cp] for cp in class_prob], [feature_count])
+    
+    # Chi-square calculation
+    def chi_square(observed, expected):
+        chi2_stat = 0
+        for i, obs_row in enumerate(observed):
+            exp_row = expected[i]
+            for obs_val, exp_val in zip(obs_row, exp_row):
+                if exp_val > 0:  # To avoid division by zero
+                    chi2_stat += (obs_val - exp_val) ** 2 / exp_val
+        return chi2_stat
+    
+    return chi_square(observed, expected)
 
 def cosine_similarity(a:np.array, b:np.array) -> float:
     """
@@ -85,7 +122,7 @@ def normalize_vector(vector: np.ndarray) -> np.ndarray:
 def find_candidates(row, pmf_cols:Iterable, thresholds:dict) -> List[int]:
     candidates = {}
     for idx, pmf_col in enumerate(pmf_cols):
-        if row[pmf_col] >= thresholds[idx]:  # Check if PMF exceeds the threshold for this category
+        if row[pmf_col] > thresholds[idx]:  # Check if PMF exceeds the threshold for this category
             candidates[idx] = row[pmf_col]
     # Return top 2 candidates as list
     return list(dict(sorted(candidates.items(), key=lambda x: x[1], reverse=True)[:2]).keys())
@@ -158,8 +195,14 @@ class TfIdfVectorizer(object):
         This method is not used in project thus not implemented.
         """
         raise NotImplementedError
+
+    def __repr__(self):
+        return f"TfIdfVectorizer(sublinear_tf={self.sublinear_tf}, min_df={self.min_df}, norm={self.norm}, ngram_range={self.ngram_range})"
+    
+    def __str__(self):
+        return f"TfIdfVectorizer(sublinear_tf={self.sublinear_tf}, min_df={self.min_df}, norm={self.norm}, ngram_range={self.ngram_range})"
         
-def main(random_seed:int=42, *args, **kwargs) -> tuple:
+def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> tuple:
     root_path = os.path.join(get_project_root(), 'data', 'bbc')
     text_path = os.path.join(root_path, 'raw_text')
 
@@ -305,11 +348,14 @@ def main(random_seed:int=42, *args, **kwargs) -> tuple:
     # Assess using the PMF2-based classification
     test_df['pmf2_predict'] = test_df[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
     test_df_norm['pmf2_predict'] = test_df_norm[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
-    test_df['pmf2_correct'] = (test_df['pmf2_predict'] == test_df['classid']).astype(int)
-    test_df_norm['pmf2_correct'] = (test_df_norm['pmf2_predict'] == test_df_norm['classid']).astype(int)
-    print(f"Accuracy of PMF2-based classification: {test_df['pmf2_correct'].mean():.2f}")
-    print(f"Accuracy of PMF2-based classification (Normalized): {test_df_norm['pmf2_correct'].mean():.2f}")
+    test_df['pmftwo_predict'] = (test_df['pmf2_predict'] == test_df['classid']).astype(int)
+    test_df_norm['pmftwo_predict'] = (test_df_norm['pmf2_predict'] == test_df_norm['classid']).astype(int)
+    print(f"Accuracy of PMF2-based classification: {test_df['pmftwo_predict'].mean():.2f}")
+    print(f"Accuracy of PMF2-based classification (Normalized): {test_df_norm['pmftwo_predict'].mean():.2f}")
 
+    if not multiple_category:
+        return test_df['distance_correct'], test_df_norm['distance_correct'], test_df['pmf_correct'], test_df_norm['pmf_correct'], test_df['pmftwo_predict'], test_df_norm['pmftwo_predict']
+    
     category_threshold = {i : 0 for i in range(5)}
     category_threshold_norm = {i : 0 for i in range(5)}
     category_threshold_2 = {i : 0 for i in range(5)}
@@ -406,6 +452,8 @@ def main(random_seed:int=42, *args, **kwargs) -> tuple:
     pmf2_columns = [f'pmftwo_cat{i}' for i in range(5)]
 
     # Apply the function to find candidates for each document
+    test_df['second_closest_centroid'] = test_df.apply(lambda x: sorted([(i, x[f"distance_to_centroid_{i}"])[1] for i in range(5)], key=lambda x: x[1])[1][0], axis=1)
+    test_df_norm['second_closest_centroid'] = test_df_norm.apply(lambda x: sorted([(i, x[f"distance_to_centroid_{i}"])[1] for i in range(5)], key=lambda x: x[1])[1][0], axis=1)
     test_df['candidate_categories'] = test_df.apply(find_candidates, axis=1, pmf_cols=pmf_columns, thresholds=category_threshold)
     test_df['candidate_categories_2'] = test_df.apply(find_candidates, axis=1, pmf_cols=pmf2_columns, thresholds=category_threshold)
     test_df_norm['candidate_categories'] = test_df_norm.apply(find_candidates, axis=1, pmf_cols=pmf_columns, thresholds=category_threshold)
@@ -417,21 +465,35 @@ def main(random_seed:int=42, *args, **kwargs) -> tuple:
     return test_df['pmf_correct'].mean(), test_df_norm['pmf_correct'].mean()
 
 if __name__ == "__main__":
-    # test_size = 20
-    # accuracy = []
-    # accuracy_norm = []
-    # test_rand_array = [random.randint(0, 100) for i in range(test_size)]
-    # for seed in tqdm(test_rand_array):
-    #     _acc, _acc_norm = main(rand_seed=seed)
-    #     accuracy.append(_acc)
-    #     accuracy_norm.append(_acc_norm)
+    test_size = 100
+    accuracy = []
+    accuracy_norm = []
+    accuracy2 = []
+    accuracy2_norm = []
+    accuracy3 = []
+    accuracy3_norm = []
+    test_rand_array = [random.randint(0, 100) for i in range(test_size)]
+    for seed in tqdm(test_rand_array):
+        _distance_acc, _distance_acc_norm, _pmf_acc, _pmf_acc_norm, _pmf2_acc, _pmf2_acc_norm = main(rand_seed=seed, multiple_category=False)
+        accuracy.append(_distance_acc)
+        accuracy_norm.append(_distance_acc_norm)
+        accuracy2.append(_pmf_acc)
+        accuracy2_norm.append(_pmf_acc_norm)
+        accuracy3.append(_pmf2_acc)
+        accuracy3_norm.append(_pmf2_acc_norm)
     
-    # _df = pd.DataFrame({
-    #     'accuracy':accuracy,
-    #     'accuracy_norm':accuracy_norm
-    # })
+    _df = pd.DataFrame({
+        'shortest_distance':accuracy,
+        'shortest_distance_norm':accuracy_norm,
+        'gaussian_dist':accuracy2,
+        'gaussian_dist_norm':accuracy2_norm,
+        'logistic_dist':accuracy3,
+        'logistic_dist_norm':accuracy3_norm
+    })
 
-    # df_melt = _df.melt(var_name='Accuracy Type', value_name='Accuracy Value')
-    # sns.boxplot(x='Accuracy Type', y='Accuracy Value', data=df_melt)
-    # plt.show()
-    main()
+    df_melt = _df.melt(var_name='Accuracy Type', value_name='Accuracy Value')
+    sns.boxplot(x='Accuracy Type', y='Accuracy Value', data=df_melt)
+    plt.show()
+    plt.savefig('bbc_analysis.png')
+    
+    # main(multiple_category=True)
