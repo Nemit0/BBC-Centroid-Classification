@@ -45,10 +45,13 @@ def euclidean_distance(a:np.array, b:np.array) -> float:
             raise ValueError("Input vectors cannot be converted to numpy arrays.")
     return np.linalg.norm(a - b)
 
-def gaussian_pdf(x, variance, mean=0):
+def gaussian_pdf(x:float, variance:float, mean:float=0.0) -> float:
     if variance < 1e-10:  # handle small variance to avoid division by zero
         variance += 1e-10
     return (1 / np.sqrt(2 * np.pi * variance)) * np.exp(-0.5 * ((x - mean) ** 2) / variance)
+
+def logistic(x:float, alpha:float=1.0) -> float:
+    return 1 / np.exp(alpha * x)
 
 def cost(a, b) -> float:
     return float(len(set(a).difference(b)) + len(set(b).difference(a))/len(set(a).union(b)))
@@ -81,11 +84,12 @@ def normalize_vector(vector: np.ndarray) -> np.ndarray:
     return np.divide(vector, np.linalg.norm(vector))
 
 def find_candidates(row, pmf_cols:Iterable, thresholds:dict) -> List[int]:
-    candidates = []
+    candidates = {}
     for idx, pmf_col in enumerate(pmf_cols):
         if row[pmf_col] >= thresholds[idx]:  # Check if PMF exceeds the threshold for this category
-            candidates.append(idx)  # Use the category index as candidate
-    return candidates if candidates else [-1]
+            candidates[idx] = row[pmf_col]
+    # Return top 2 candidates as list
+    return list(dict(sorted(candidates.items(), key=lambda x: x[1], reverse=True)[:2]).keys())
 
 class TfIdfVectorizer(object):
     def __init__(self, sublinear_tf=True, min_df=5, norm='l2', ngram_range=(1, 2), stop_word_lang='english'):
@@ -150,11 +154,13 @@ class TfIdfVectorizer(object):
         return tfidf_matrix
 
     def embed_doc(self, doc:str) -> np.array:
+        """
+        Ideally this should be implemented that will embed a new document with the existing vocab and data.
+        This method is not used in project thus not implemented.
+        """
         raise NotImplementedError
         
-    
-
-def main(*args, **kwargs) -> tuple:
+def main(random_seed:int=42, *args, **kwargs) -> tuple:
     root_path = os.path.join(get_project_root(), 'data', 'bbc')
     text_path = os.path.join(root_path, 'raw_text')
 
@@ -240,8 +246,8 @@ def main(*args, **kwargs) -> tuple:
         df_norm['embeddings'] = df_norm['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
 
     train_test_ratio = 0.7
-    df = df.sample(frac=1, **kwargs)
-    df_norm = df_norm.sample(frac=1, random_state=1)
+    df = df.sample(frac=1, random_state=random_seed)
+    df_norm = df_norm.sample(frac=1, random_state=random_seed)
     train_df = df.iloc[:int(np.floor(train_test_ratio * len(df)))]
     test_df = df.iloc[int(np.floor(train_test_ratio * len(df))+1):]
     train_df_norm = df_norm.iloc[:int(np.floor(train_test_ratio * len(df_norm)))]
@@ -272,12 +278,17 @@ def main(*args, **kwargs) -> tuple:
     for i in range(5):
         train_df[f"pmf_cat{i}"] = train_df[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df.iloc[i]['variance']))
         test_df[f"pmf_cat{i}"] = test_df[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df.iloc[i]['variance']))
+        train_df[f"pmftwo_cat{i}"] = train_df[f"distance_to_centroid_{i}"].apply(lambda x: logistic(x, alpha=1e-3))
+        test_df[f"pmftwo_cat{i}"] = test_df[f"distance_to_centroid_{i}"].apply(lambda x: logistic(x, alpha=1e-3))
         train_df_norm[f"pmf_cat{i}"] = train_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df_norm.iloc[i]['variance']))
         test_df_norm[f"pmf_cat{i}"] = test_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: gaussian_pdf(x, centroid_df_norm.iloc[i]['variance']))
+        train_df_norm[f"pmftwo_cat{i}"] = train_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: logistic(x, alpha=1e-3))
+        test_df_norm[f"pmftwo_cat{i}"] = test_df_norm[f"distance_to_centroid_{i}"].apply(lambda x: logistic(x, alpha=1e-3))
 
     distance_cols = [col for col in train_df.columns if "distance_to_centroid_" in col]
     pmf_cols = [col for col in train_df.columns if "pmf_cat" in col]
-    data = train_df.copy()
+    pmf2_cols = [col for col in train_df.columns if "pmftwo_cat" in col]
+
     # Assess using the distance-based classification
     test_df['closest_centroid'] = test_df[distance_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
     test_df_norm['closest_centroid'] = test_df_norm[distance_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
@@ -292,65 +303,112 @@ def main(*args, **kwargs) -> tuple:
     test_df_norm['pmf_correct'] = (test_df_norm['pmf_predict'] == test_df_norm['classid']).astype(int)
     print(f"Accuracy of PMF-based classification: {test_df['pmf_correct'].mean():.2f}")
     print(f"Accuracy of PMF-based classification (Normalized): {test_df_norm['pmf_correct'].mean():.2f}")
+    # Assess using the PMF2-based classification
+    test_df['pmf2_predict'] = test_df[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    test_df_norm['pmf2_predict'] = test_df_norm[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    test_df['pmf2_correct'] = (test_df['pmf2_predict'] == test_df['classid']).astype(int)
+    test_df_norm['pmf2_correct'] = (test_df_norm['pmf2_predict'] == test_df_norm['classid']).astype(int)
+    print(f"Accuracy of PMF2-based classification: {test_df['pmf2_correct'].mean():.2f}")
+    print(f"Accuracy of PMF2-based classification (Normalized): {test_df_norm['pmf2_correct'].mean():.2f}")
 
     category_threshold = {i : 0 for i in range(5)}
     category_threshold_norm = {i : 0 for i in range(5)}
+    category_threshold_2 = {i : 0 for i in range(5)}
+    category_threshold_2_norm = {i : 0 for i in range(5)}
     # Assess train_df to find the threshold for each category
     train_df['pmf_predict'] = train_df[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
     train_df['pmf_correct'] = (train_df['pmf_predict'] == train_df['classid']).astype(int)
+    train_df['pmftwo_predict'] = train_df[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df['pmftwo_correct'] = (train_df['pmftwo_predict'] == train_df['classid']).astype(int)
     train_df_norm['pmf_predict'] = train_df_norm[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
     train_df_norm['pmf_correct'] = (train_df_norm['pmf_predict'] == train_df_norm['classid']).astype(int)
+    train_df_norm['pmftwo_predict'] = train_df_norm[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df_norm['pmftwo_correct'] = (train_df_norm['pmftwo_predict'] == train_df_norm['classid']).astype(int)
 
     learning_rate = 1e-14
     learning_step = 1000
     for i in range(5): # Category Loop
-        for j in range(learning_step):
+        for j in tqdm(range(learning_step)):
             if j == 0:
                 prior_loss = 10000 # Some large number to initialize loss
+                prior_loss_2 = 10000
             loss_list = []
+            loss_list_2 = []
             for k in range(len(test_df)):
-                loss = cost(set([test_df.iloc[k]['classid']]), set([i]) if test_df[f'pmf_cat{i}'][k] > category_threshold[i] else set([]))
+                loss = cost(set([test_df.iloc[k]['classid']]), set([i]) if test_df[f'pmf_cat{i}'][k] > category_threshold_norm[i] else set([]))
                 loss_list.append(loss)
+                loss2 = cost(set([test_df.iloc[k]['classid']]), set([i]) if test_df[f'pmftwo_cat{i}'][k] > category_threshold_2_norm[i] else set([]))
+                loss_list_2.append(loss2)
             
             loss_mean = np.mean(loss_list)  
-            if loss_mean < prior_loss:
-                category_threshold[i] += learning_rate
+            if loss_mean <= prior_loss:
+                category_threshold_norm[i] += learning_rate
             elif loss_mean > prior_loss:
-                category_threshold[i] -= learning_rate
+                category_threshold_norm[i] -= learning_rate
             else:
                 pass
+                
+            loss_mean_2 = np.mean(loss_list_2)
+            if loss_mean_2 <= prior_loss_2:
+                category_threshold_2_norm[i] += learning_rate
+            elif loss_mean_2 > prior_loss_2:
+                category_threshold_2_norm[i] -= learning_rate
+            else:
+                pass
+            
             prior_loss = loss_mean
+            prior_loss_2 = loss_mean_2
         
     # Repeat for normalized data
     for i in range(5): # Category Loop
         for j in tqdm(range(learning_step)) :
             if j == 0:
                 prior_loss = 10000
+                prior_loss_2 = 10000
             loss_list = []
+            loss_list_2 = []
             for k in range(len(test_df_norm)):
                 loss = cost(set([test_df_norm.iloc[k]['classid']]), set([i]) if test_df_norm[f'pmf_cat{i}'][k] > category_threshold_norm[i] else set([]))
                 loss_list.append(loss)
-            
+                loss2 = cost(set([test_df_norm.iloc[k]['classid']]), set([i]) if test_df_norm[f'pmftwo_cat{i}'][k] > category_threshold_norm[i] else set([]))
+                loss_list_2.append(loss2)
+
             loss_mean = np.mean(loss_list)
-            if loss_mean < prior_loss:
+            if loss_mean <= prior_loss:
                 category_threshold_norm[i] += learning_rate
             elif loss_mean > prior_loss:
                 category_threshold_norm[i] -= learning_rate
             else:
                 pass
+
+            loss_mean_2 = np.mean(loss_list_2)
+            if loss_mean_2 <= prior_loss_2:
+                category_threshold_2[i] += learning_rate
+            elif loss_mean_2 > prior_loss_2:
+                category_threshold_2[i] -= learning_rate
+            else:
+                pass
+
             prior_loss = loss_mean
+            prior_loss_2 = loss_mean_2
 
     print(category_threshold)
+    print(category_threshold_norm)
+    print(category_threshold_2)
+    print(category_threshold_2_norm)
 
     test_df['candidate_category'] = test_df.apply(lambda x: x['pmf_predict'] if x[f"pmf_cat{x['pmf_predict']}"] >= category_threshold[x['pmf_predict']] else x['classid'], axis=1)
     test_df_norm['candidate_category'] = test_df_norm.apply(lambda x: x['pmf_predict'] if x[f"pmf_cat{x['pmf_predict']}"] >= category_threshold_norm[x['pmf_predict']] else x['classid'], axis=1)
 
     # PMF columns in your DataFrame
     pmf_columns = [f'pmf_cat{i}' for i in range(5)]
+    pmf2_columns = [f'pmftwo_cat{i}' for i in range(5)]
 
     # Apply the function to find candidates for each document
     test_df['candidate_categories'] = test_df.apply(find_candidates, axis=1, pmf_cols=pmf_columns, thresholds=category_threshold)
+    test_df['candidate_categories_2'] = test_df.apply(find_candidates, axis=1, pmf_cols=pmf2_columns, thresholds=category_threshold)
     test_df_norm['candidate_categories'] = test_df_norm.apply(find_candidates, axis=1, pmf_cols=pmf_columns, thresholds=category_threshold)
+    test_df_norm['candidate_categories_2'] = test_df_norm.apply(find_candidates, axis=1, pmf_cols=pmf2_columns, thresholds=category_threshold)
 
     # Savezx
     test_df.to_csv(os.path.join(root_path, 'test_df.csv'))
@@ -375,4 +433,4 @@ if __name__ == "__main__":
     # df_melt = _df.melt(var_name='Accuracy Type', value_name='Accuracy Value')
     # sns.boxplot(x='Accuracy Type', y='Accuracy Value', data=df_melt)
     # plt.show()
-    main(random_state=0)
+    main()
