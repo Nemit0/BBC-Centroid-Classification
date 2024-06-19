@@ -38,7 +38,7 @@ def main(random_seed:int=42, multiple_category:bool=False, k_fold_validation:boo
     print(df_trimmed.head())
 
     df_trimmed['candidate_category'] = [-1] * len(df_trimmed)
-    df_relation = {i: {j: 0 for j in range(5)} for i in range(5)}
+    df_relation = {i: {j: 0 for j in range(5) if j != i} for i in range(5)}
     for j in range(len(df_trimmed)):
         candidate_categories = json.loads(df_trimmed['candidate_categories'].iloc[j])
         true_category = df_trimmed['classid'].iloc[j]
@@ -52,14 +52,17 @@ def main(random_seed:int=42, multiple_category:bool=False, k_fold_validation:boo
     # Calculate category relation
     for i in range(5):
         for j in range(len(df_trimmed)):
-            candidate_category= df_trimmed['candidate_category'].iloc[j]
-            df_relation[i][candidate_category] += 1
+            true_category = df_trimmed['classid'].iloc[j]
+            if i == true_category:
+                candidate_category= df_trimmed['candidate_category'].iloc[j]
+                df_relation[i][candidate_category] += 1
     
     # Plot as heatmap
     df_relation = pd.DataFrame(df_relation)
+    df_relation.fillna(0, inplace=True)
     print(df_relation)
     plt.figure(figsize=(10, 10))
-    sns.heatmap(df_relation, annot=True, fmt='d', cmap='viridis')
+    sns.heatmap(df_relation, annot=True, cmap='viridis')
     plt.show()
 
     df_trimmed.to_csv(os.path.join(root_path, 'test_df_trimmed.csv'), index=False)

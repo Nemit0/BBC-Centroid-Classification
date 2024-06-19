@@ -1,9 +1,7 @@
-% October 30, 2007
-% Math 589
 
 \documentclass[
-    10pt % font size
-    16:9, % 1920x1080
+  10pt % font size
+  16:9, % 1920x1080
 ]{beamer}
 % \usetheme{default}
 % \usetheme{Boadilla}
@@ -36,7 +34,7 @@
 \addtobeamertemplate{footline}{}{%
   \hfill%
   \raisebox{5mm}[0pt][10pt]{%
-    \includegraphics[height=1cm]{kyu_univ_logo.png}%
+  \includegraphics[height=1cm]{kyu_univ_logo.png}%
   }\hspace*{5mm}
 }
 
@@ -60,23 +58,24 @@
 {
   \frametitle{Project Objectives}
   \begin{itemize}
-    \item The goal of this project is classify document per category on given dataset.
-    \item Document Embedding Model: Tf-Idf Vectorizer
-    \item Classification Model: Centroid Classification
+  \item The goal of this project is classify document per category on given dataset.
+  \item Document Embedding Model: Tf-Idf Vectorizer
+  \item Classification Model: Centroid Classification
   \end{itemize}
 }
+
 \section{Dataset and Pre-liminary Analysis}
 \frame
 {
   \frametitle{Dataset and Pre-liminary Analysis}
   \begin{itemize}
-    \item \href{http://mlg.ucd.ie/datasets/bbc.html}{BBC ML Dataset}
-    \item Consist of 2225 articles, with categories: 'business', 'entertainment', 'politics', 'sport', 'tech'
-    \item Dataset was changed from Wikipedia to BBC dataset due to complication in model training and dataset processing.
+  \item \href{http://mlg.ucd.ie/datasets/bbc.html}{BBC ML Dataset}
+  \item Consist of 2225 articles, with categories: 'business', 'entertainment', 'politics', 'sport', 'tech'
+  \item Dataset was changed from Wikipedia to BBC dataset due to complication in model training and dataset processing.
   \end{itemize}
   \begin{figure}
-    \centering
-    \includegraphics[width=0.5\textwidth]{categories.png}
+  \centering
+  \includegraphics[width=0.5\textwidth]{categories.png}
   \end{figure}
 }
 
@@ -85,41 +84,40 @@
 {
   \frametitle{Data Preprocessing}
   \begin{itemize}
-    \item Category-Token Chi2 test
+  \item Category-Token Chi2 test
   \end{itemize}
   \begin{table}
-    \centering
-    \begin{tabular}{@{}llllll@{}}
-        \toprule
-        Category       & 1st       & 2nd      & 3rd      \\ \midrule
-        Business       & oil       & bank     & growth   \\
-        Entertainment  & award     & singer   & awards   \\
-        Politics       & tory      & blair    & party    \\
-        Sport          & win       & injury   & coach    \\
-        Tech           & digital   & computer & software \\
-        \bottomrule
-    \end{tabular}
+  \centering
+  \begin{tabular}{@{}llllll@{}}
+    \toprule
+    Category       & 1st       & 2nd      & 3rd      \\ \midrule
+    Business       & oil       & bank     & growth   \\
+    Entertainment  & award     & singer   & awards   \\
+    Politics       & tory      & blair    & party    \\
+    Sport          & win       & injury   & coach    \\
+    Tech           & digital   & computer & software \\
+    \bottomrule
+  \end{tabular}
   \end{table}
 }
 
 \begin{frame}
   \frametitle{Tf-Idf Embedding}
   \begin{itemize}
-    \item Instead of plain BoW encoding, we use tf-idf scoring to encode the documents.
-    \item The token value is calculated as follows:
-    \begin{align}
-      tf(t,d) &= \frac{f_{t,d}}{\sum_{t' \in d} f_{t',d}} \\
-      idf(t) &= \log\left(\frac{N}{n_t}\right) \\
-      tfidf(t,d) &= tf(t,d) \times idf(t)
-    \end{align}
+  \item Instead of plain BoW encoding, we use tf-idf scoring to encode the documents.
+  \item The token value is calculated as follows:
+  \begin{align}
+    tf(t,d) &= \frac{f_{t,d}}{\sum_{t' \in d} f_{t',d}} \\
+    idf(t) &= \log\left(\frac{N}{n_t}\right) \\
+    tfidf(t,d) &= tf(t,d) \times idf(t)
+  \end{align}
   \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Tf-Idf Embedding}
   \begin{itemize}
-    \item Prior to embedding, unique words(unigrams and bigrams) are extracted from the dataset to be used as tokenizer.
-    \item The tokens are filtered based on $\sum_{d \in D} tfidf(t,d)$, to filter out tokens with low occurance, in our project it's set to 5. Resulting token size is 17989.
+  \item Prior to embedding, unique words(unigrams and bigrams) are extracted from the dataset to be used as tokenizer.
     \item For each document, the token value(vector index) in the vector is given by tf-idf scoring of document.
   \end{itemize}
 \end{frame}
@@ -186,7 +184,7 @@
     \]
     where $C_d$ is document categories set, and $C_d'$ is predicted categories set.
     \item Starting from threshold 0, we increase the threshold by a learning rate value until the cost function is minimized.
-    \item We generate a candidate category for both pmf value using trained threshold, and we simply choose second closest centroid for Closest Centroid.
+    \item We generate a candidate category for both pmf value using trained threshold, and choose candidate of which have same candidate for Gaussian and Logistic.
   \end{itemize}
 \end{frame}
 
@@ -219,4 +217,32 @@
   \end{figure}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Multiple Category Classification}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{candidate_relation.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Multiple Category Classification}
+  \begin{itemize}
+    \item Sports article were most associated with entertainment, while entertainment article was candidate for only 3 sports. The 3 documents commonly include description of winning an award or similar context
+    \item 1 tech documents were incorrectly labled as sports, which included description of video game metal slug.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Entertainment with Candidate Sports}
+
+Ray's success on DVD outstripped its \$74m (£40m) US box office total, earning more than \$40m (£22m) on the first day of the DVD's release alone. Ray has been nominated in six Oscar categories including best film and best actor for Jamie Foxx. The film recounts the life of blues singer Ray Charles, ...
+\end{frame}
+
+\begin{frame}
+  \frametitle{Miscategorized Tech Article}
+Like some drill sergeant from the past, Metal Slug 3 is a wake-up call to today's gamers molly-coddled with slick visuals and fancy trimmings.
+
+With its hand-animated sprites and 2D side-scrolling, this was even considered retro when released in arcades four years ago. But a more frantic shooter you will not find at the end of your joypad this year. And yes, that includes Halo 2. Simply choose your grunt and wade through five 2D side-scrolling levels of the most hectic video game blasting you will ever encounter. It is also the toughest game you are likely to play, as hordes of enemies and few lives pile the pressure on...
+\end{frame}
 \end{document}
