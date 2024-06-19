@@ -1,0 +1,16 @@
+pandas
+polars
+numpy
+pyarrow
+fastparquet
+tiktoken
+openai
+tqdm
+python-dotenv
+torch
+transformers
+scikit-learn
+matplotlib
+nltk
+rich
+tenacity

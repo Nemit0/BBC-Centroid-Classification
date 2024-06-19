@@ -165,7 +165,7 @@ class TfIdfVectorizer(object):
     def __str__(self):
         return f"TfIdfVectorizer(sublinear_tf={self.sublinear_tf}, min_df={self.min_df}, norm={self.norm}, ngram_range={self.ngram_range})"
         
-def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> tuple:
+def main(random_seed:int=42, multiple_category:bool=False, k_fold_validation:bool=False, k:int=5) -> tuple:
     root_path = os.path.join(get_project_root(), 'data', 'bbc')
     text_path = os.path.join(root_path, 'raw_text')
 
@@ -250,6 +250,9 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
         df['embeddings'] = df['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
         df_norm['embeddings'] = df_norm['embeddings'].apply(lambda x: np.array(x, dtype=np.float128))
 
+    if k_fold_validation:
+        raise NotImplementedError("K-Fold Validation is not implemented yet.")
+        
     train_test_ratio = 0.7
     print(random_seed)
     df = df.sample(frac=1, random_state=random_seed)
@@ -329,9 +332,9 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
     train_df['pmf_correct'] = (train_df['pmf_predict'] == train_df['classid']).astype(int)
     train_df['pmftwo_predict'] = train_df[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
     train_df['pmftwo_correct'] = (train_df['pmftwo_predict'] == train_df['classid']).astype(int)
-    train_df_norm['pmf_predict'] = train_df_norm[pmf_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df_norm['pmf_predict'] = train_df_norm[pmf_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
     train_df_norm['pmf_correct'] = (train_df_norm['pmf_predict'] == train_df_norm['classid']).astype(int)
-    train_df_norm['pmftwo_predict'] = train_df_norm[pmf2_cols].idxmax(axis=1).str.extract('(\d+)').astype(int)
+    train_df_norm['pmftwo_predict'] = train_df_norm[pmf2_cols].idxmin(axis=1).str.extract('(\d+)').astype(int)
     train_df_norm['pmftwo_correct'] = (train_df_norm['pmftwo_predict'] == train_df_norm['classid']).astype(int)
 
     learning_rate = 1e-14
@@ -429,7 +432,7 @@ def main(random_seed:int=42, multiple_category:bool=False, *args, **kwargs) -> t
     return test_df['pmf_correct'].mean(), test_df_norm['pmf_correct'].mean()
 
 if __name__ == "__main__":
-    test_size = 50
+    test_size = 1
     accuracy = []
     accuracy_norm = []
     accuracy2 = []
