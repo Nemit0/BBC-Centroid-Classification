@@ -1,8 +1,0 @@
-Feedback:
-1. Reason on using Normal Distribution?
--> Use Central Limit Theorem.
-
-2. Sementic Analysis? Context-aware word count?
--> Hopefully is fixed using BoW method as it counts all words occurances.
-
-
