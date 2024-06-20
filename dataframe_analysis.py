@@ -1,23 +1,16 @@
 import os
-import re
 import warnings
-import random
 import json
 
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
-from typing import List, Iterable
 from rich import print
-from tqdm import tqdm
 
 from module.utils import get_project_root
 
-def main(random_seed:int=42, multiple_category:bool=False, k_fold_validation:bool=False, k:int=5) -> tuple:
+def main():
     root_path = os.path.join(get_project_root(), 'data', 'bbc')
 
     warnings.filterwarnings("ignore")
@@ -66,7 +59,6 @@ def main(random_seed:int=42, multiple_category:bool=False, k_fold_validation:boo
     plt.show()
 
     df_trimmed.to_csv(os.path.join(root_path, 'test_df_trimmed.csv'), index=False)
-
 
 if __name__ == "__main__":
     main()
