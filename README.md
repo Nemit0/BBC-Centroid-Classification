@@ -21,3 +21,8 @@ And, activate and install required packages
 ```bash
 source venv/bin/activate && pip install -r requirements.txt
 ```
+
+## Project Description
+This is simple Centroid Classification on BBC ML Dataset with 5 categories.[link](http://mlg.ucd.ie/datasets/bbc.html)
+
+Place the data in ./data/bbc and run the code.
